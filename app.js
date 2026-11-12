@@ -3,7 +3,7 @@ const META=[{"k": "a1", "n": "小熊挥手"}, {"k": "a2", "n": "兔兔胡萝卜"
 'use strict';
 const TS=()=>window.__TS||1;
 const $=s=>document.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
-const LS={get(k,d){try{const v=localStorage.getItem('cp27:'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('cp27:'+k,JSON.stringify(v))}catch(e){}}};
+const LS={get(k,d){try{const v=localStorage.getItem('cp27v4:'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('cp27v4:'+k,JSON.stringify(v))}catch(e){}}};
 const Q=new URLSearchParams(location.search);
 const NAME=Object.fromEntries(META.map(m=>[m.k,m.n]));const src=k=>`stickers/${k}.png`;
 const CAT={E:'圣诞 · 限定',F:'冬日 · 暖暖',A:'软萌 · 动物',D:'日常 · 小事',B:'甜品 · 零食',C:'天气 · 心情'};const CATS=['E','F','A','D','B','C'];
@@ -11,49 +11,75 @@ const byCat=c=>META.filter(m=>m.k[0]==c.toLowerCase());
 const MON=['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
 const MZH=['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
 const HOL={'1-1':'元旦','2-6':'春节','2-14':'情人节','3-8':'女神节','4-5':'清明','5-1':'劳动节','5-20':'520','6-1':'儿童节','6-9':'端午','9-15':'中秋','10-1':'国庆','12-24':'平安夜','12-25':'圣诞'};
-const ILLO=[[['a8',22,8,62,-4],['c2',4,0,22,-12]],[['d2',20,6,62,3],['c7',2,52,24,-10]],[['c9',8,10,46,-6],['a4',46,24,50,5]],[['a3',16,4,66,0],['c6',0,54,20,8]],
- [['d9',18,6,62,2],['c8',0,4,24,-14]],[['d6',16,4,66,0]],[['b8',2,16,42,-8],['a5',42,14,54,4]],[['d3',10,10,72,0],['c4',62,-6,30,10]],
- [['d7',14,6,60,-3],['b9',66,52,30,8]],[['d8',16,6,60,2],['b6',62,58,30,-6]],[['d4',16,6,62,-2],['b1',62,0,28,12]],[['d1',8,16,70,0],['c5',62,-8,32,10]]];
+const MOTIF=['snow','bow','pine','berry','star','bell','gift','cocoa','holly','tree','pine','wreath'];
+const LINE=[['first snow','初雪的早晨'],['letters & tea','情书与热茶'],['late frost','晚冬的窗'],['light on the sill','窗边的光'],['take it slow','把日子放慢'],['something sweet','甜甜的一天'],['pine & quiet','绿意与静'],['a warm evening','暖暖的夜'],['gather softly','轻轻收拾'],['bake a little','烘一炉饼干'],['almost christmas','快要圣诞了'],['december days','圣诞月']];
+const ILLO=[[['e6',16,8,58,-4],['f2',70,2,22,14]],[['e2',18,6,60,3],['f5',68,58,26,-10]],[['e7',14,8,64,0],['f8',70,4,22,12]],[['e3',16,10,56,-3],['f9',68,6,24,8]],
+ [['e5',20,8,54,4],['f4',66,58,26,-6]],[['e4',14,8,42,-8],['f1',52,28,40,6]],[['e1',12,4,60,-3],['f8',68,50,24,10]],[['e8',18,8,50,5],['f1',62,48,30,-8]],
+ [['f6',14,8,62,0],['f2',70,4,20,16]],[['f7',12,10,66,-2],['e3',66,58,26,8]],[['e9',16,6,60,0],['e5',64,56,28,6]],[['e1',6,4,54,-3],['e2',48,30,46,4],['f2',76,0,18,12]]];
 const N=15,XM=13;
+const DEF_STK={
+  s0L:[{s:'f2',x:12,y:16,r:-14,sz:9},{s:'f3',x:90,y:18,r:18,sz:8}],
+  s0R:[{s:'f9',x:90,y:12,r:10,sz:9}],
+  s1R:[{s:'f3',x:90,y:16,r:-8,sz:8}],
+  s2R:[{s:'f8',x:90,y:16,r:8,sz:8}],
+  s3R:[{s:'f2',x:90,y:16,r:-12,sz:8}],
+  s4R:[{s:'f9',x:90,y:16,r:10,sz:8}],
+  s5R:[{s:'f4',x:90,y:16,r:-6,sz:9}],
+  s6R:[{s:'e4',x:90,y:16,r:8,sz:8}],
+  s7R:[{s:'f8',x:90,y:16,r:-8,sz:8}],
+  s8R:[{s:'f1',x:90,y:16,r:6,sz:9}],
+  s9R:[{s:'f2',x:90,y:16,r:-10,sz:8}],
+  s10R:[{s:'e3',x:90,y:16,r:8,sz:9}],
+  s11R:[{s:'e5',x:90,y:16,r:-6,sz:9}],
+  s12R:[{s:'e8',x:90,y:88,r:8,sz:11},{s:'f8',x:90,y:16,r:10,sz:8}],
+  s13L:[],
+  s13R:[{s:'f1',x:88,y:58,r:8,sz:12},{s:'e6',x:70,y:86,r:-6,sz:13},{s:'e5',x:88,y:18,r:7,sz:11},{s:'f4',x:10,y:48,r:-8,sz:9}],
+  s14L:[{s:'e4',x:16,y:88,r:-10,sz:12}],
+  s14R:[{s:'e3',x:30,y:44,r:6,sz:14},{s:'f9',x:68,y:58,r:-8,sz:12},{s:'e8',x:52,y:24,r:4,sz:13}]
+};
 let cur=LS.get('cur',0),opened=false,W=400,H=560,mode='land',hideUI=false,rx=0,ry=0,rx0=0,ry0=0;
-const notes=LS.get('notes',{});let stk=LS.get('stk',{});const save=()=>{LS.set('stk',stk);updCount()};
+const notes=LS.get('notes',{});
+let stk=LS.get('stk',null);if(!stk||typeof stk!='object')stk=JSON.parse(JSON.stringify(DEF_STK));
+const save=()=>{LS.set('stk',stk);updCount()};
 const days=(m)=>new Date(2027,m+1,0).getDate(),dow=(m,d)=>(new Date(2027,m,d).getDay()+6)%7;
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const RING_Y=[14,21,28,72,79,86];
 // ===== build sheets =====
+function corners(kind){return `<div class="corners motif-${kind}" aria-hidden="true"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>`}
+function flakes(n){let h='<div class="snowbox" aria-hidden="true">';for(let i=0;i<n;i++){const x=(i*37+13)%100,s=(0.75+(i%5)*0.28).toFixed(2),d=10+(i%7),delay=(-(i*1.15)).toFixed(2),drift=(i%2?8:-6)-(i%5);h+=`<i class="flake t${i%3}" style="left:${x}%;--s:${s};--d:${d}s;--delay:${delay}s;--drift:${drift}cqw"></i>`}return h+'</div>'}
+function lights(){const cols=['#e8d09a','#f4f8ff','#e8a8a8','#e8d09a','#cde3d0','#e8d09a','#f4f8ff'];return `<div class="lights" aria-hidden="true">${cols.map((c,i)=>`<i style="left:${12+i*12.5}%;--c:${c};animation-delay:${i*.22}s"></i>`).join('')}</div>`}
 function tabs(m){return `<div class="tabs">${MON.map((_,j)=>`<b data-go="${j+1}" class="${j==m?'on':''}">${j+1}</b>`).join('')}<b data-go="${XM}" class="xt ${m=='x'?'on':''}">★</b></div>`}
-function monthL(m){const mm=String(m+1).padStart(2,'0'),last=days(m);
- return `<div class="mh"><div class="yy">20<br>27</div><div class="sep"></div><div><div class="mo">${MON[m]}</div><div class="rg">${mm}/01<br>${mm}/${last}</div></div><div class="circ">${m+1}</div></div>
+function monthL(m){const mm=String(m+1).padStart(2,'0'),last=days(m),[en,zh]=LINE[m];
+ return `${corners(MOTIF[m])}${m===11?lights():''}<div class="mh"><div class="yy">20<br>27</div><div class="sep"></div><div><div class="mo">${MON[m]}</div><div class="rg">${mm}/01<br>${mm}/${last}</div></div><div class="circ">${m+1}</div></div>
  <div class="illo">${ILLO[m].map(([k,l,t,w,r])=>`<img src="${src(k)}" style="left:${l}%;top:${t}%;width:${w}%;transform:rotate(${r}deg)" alt="">`).join('')}</div>
- <div class="tag">#${MON[m]}</div><div class="pfoot"><span>SOFT DAYS · MONTHLY</span><span>${MZH[m]}</span></div>`}
+ <div class="epigraph"><em>${en}</em><span>${zh}</span></div><div class="pfoot"><span>SOFT CHRISTMAS · MONTHLY</span><span>${MZH[m]}</span></div>${flakes(m===11?11:m===0||m===10?7:4)}`}
 function monthR(m){const first=dow(m,1),n=days(m);let c='';
  for(let i=0;i<42;i++){const d=i-first+1,wd=i%7;
   if(d<1||d>n){c+=`<div class="cell x"></div>`;continue}
   const key=`${m+1}-${d}`;c+=`<div class="cell ${wd==5?'sa':wd==6?'su':''}" data-d="${key}"><span class="d">${d}</span>${HOL[key]?`<span class="hol">${HOL[key]}</span>`:''}<span class="nt">${esc(notes[key]||'')}</span></div>`}
- return `<div class="calw"><div class="wkh"><span>Mon.</span><span>Tue.</span><span>Wed.</span><span>Thu.</span><span>Fri.</span><span class="sa">Sat.</span><span class="su">Sun.</span></div><div class="grid">${c}</div>
+ return `${corners(MOTIF[m])}<div class="pg-kicker"><span>MERRY &amp; SOFT</span><i></i><span>${MZH[m]}</span></div><div class="calw"><div class="wkh"><span>Mon.</span><span>Tue.</span><span>Wed.</span><span>Thu.</span><span>Fri.</span><span class="sa">Sat.</span><span class="su">Sun.</span></div><div class="grid">${c}</div>
  <div class="calnote"><span>✎ 点日期直接写</span><span>· 贴纸随便贴</span></div></div>${tabs(m)}`}
-function titleL(){return `<div class="ti"><div class="big">2027</div><div class="s1">my soft days planner</div><div class="ln"></div>
- <div class="who">THIS BOOK BELONGS TO<br><span contenteditable data-k="owner"></span></div><img src="${src('d5')}" alt=""></div>`}
-function titleR(){return `<div class="ti"><div class="who" style="margin-bottom:4cqw">INDEX · 月份目录</div><div class="idx">${MON.map((m,j)=>`<b data-go="${j+1}">${j+1}月<small>${m.slice(0,3).toLowerCase()}</small></b>`).join('')}<b class="xb" data-go="${XM}">🎄 圣诞特辑 <small>christmas special</small></b></div>
+function titleL(){return `${corners('wreath')}${flakes(8)}<div class="ti"><div style="font:600 2.4cqw/1 var(--sans);letter-spacing:.4em;color:#8a8076">·  2027  ·</div><div class="big han">暖冬手帐</div><div class="s1">my christmas days planner</div><div class="ln"></div>
+ <div class="who">THIS BOOK BELONGS TO<br><span contenteditable data-k="owner"></span></div><img src="${src('e9')}" alt=""></div>`}
+function titleR(){return `${corners('star')}<div class="ti"><div class="who" style="margin-bottom:4cqw">INDEX · 月份目录</div><div class="idx">${MON.map((m,j)=>`<b data-go="${j+1}">${j+1}月<small>${m.slice(0,3).toLowerCase()}</small></b>`).join('')}<b class="xb" data-go="${XM}">🎄 圣诞特辑 <small>christmas special</small></b></div>
  <div class="s1" style="margin-top:6cqw">tap a month ♡</div></div>${tabs(-1)}`}
-function freeL(){return `<div class="dotbg" style="position:absolute;inset:0"></div><div class="ti" style="justify-content:flex-start;padding-top:12cqw"><div class="big" style="font-size:9cqw">STICKER<br>FREE ZONE</div><div class="s1">贴满它 · stick them all</div></div>`}
-function freeR(){return `<div class="dotbg" style="position:absolute;inset:0"></div><div class="pfoot" style="left:10cqw"><span>SOFT DAYS · 2027</span><span>♡</span></div>${tabs(-1)}`}
-const snow=`<div class="snowbox"><div class="snow s1"></div><div class="snow s2"></div></div>`;
+function freeL(){return `${corners('bow')}${flakes(5)}<div class="dotbg" style="position:absolute;inset:0"></div><div class="ti" style="justify-content:flex-start;padding-top:14cqw"><div class="big" style="font-size:8.4cqw">STICKER<br>FREE ZONE</div><div class="s1">把冬天贴满这一页</div></div>`}
+function freeR(){return `${corners('gift')}<div class="dotbg" style="position:absolute;inset:0"></div><div class="pfoot" style="left:10cqw"><span>SOFT CHRISTMAS · 2027</span><span>♡</span></div>${tabs(-1)}`}
 function xmasL(){
- return `<div class="mh"><div class="yy">20<br>27</div><div class="sep"></div><div><div class="mo">DECEMBER</div><div class="rg">12/24<br>12/25</div></div><div class="circ xc">★</div></div>
+ return `${corners('tree')}${lights()}<div class="mh"><div class="yy">20<br>27</div><div class="sep"></div><div><div class="mo">DECEMBER</div><div class="rg">12/24<br>12/25</div></div><div class="circ xc">★</div></div>
  <div class="washi"></div>
  <div class="illo xi"><img src="${src('e1')}" style="left:4%;top:2%;width:56%;transform:rotate(-3deg)" alt=""><img src="${src('e2')}" style="left:44%;top:30%;width:50%;transform:rotate(4deg)" alt=""><img src="${src('f2')}" style="left:76%;top:0;width:18%;transform:rotate(12deg)" alt=""></div>
- <div class="tag xtag">#Merry Christmas</div><div class="pfoot"><span>SOFT DAYS · CHRISTMAS SPECIAL</span><span>圣诞特辑</span></div>${snow}`}
+ <div class="tag xtag">#Merry Christmas</div><div class="pfoot"><span>SOFT DAYS · CHRISTMAS SPECIAL</span><span>圣诞特辑</span></div>${flakes(12)}`}
 function xmasR(){const wk=[21,22,23,24,25,26,27],nm=['Mon.','Tue.','Wed.','Thu.','Fri.','Sat.','Sun.'];
- return `<div class="xm-in">
+ return `${corners('holly')}<div class="xm-in">
  <div class="xm-h"><span>WISH LIST</span><i></i><span>圣诞心愿</span></div>
  <div class="cell xcard" data-d="xmas-card"><span class="d">To: 亲爱的你</span><span class="nt">${esc(notes['xmas-card']||'')}</span></div>
  <div class="xm-wk">${wk.map((d,i)=>`<div class="${i==5?'sa':i==6?'su':''} ${d==24||d==25?'hot':''}"><small>${nm[i]}</small><b>${d}</b>${d==24?'<em>平安夜</em>':d==25?'<em>圣诞</em>':''}</div>`).join('')}</div>
  <div class="xm-list"><span><i></i>交换礼物</span><span><i></i>热可可 + 一部老电影</span><span><i></i>等第一场雪</span></div>
- <div class="xm-ft"><span>A6 · DECEMBER</span><span>▸▸▸</span></div></div>${snow}${tabs('x')}`}
+ <div class="xm-ft"><span>A6 · DECEMBER</span><span>▸▸▸</span></div></div>${flakes(8)}${tabs('x')}`}
 const holes=`<div class="holes" style="position:absolute;left:0;top:0;height:100%;width:calc(var(--W)*.08);z-index:40;pointer-events:none">${RING_Y.map(y=>`<i style="position:absolute;left:calc(var(--W)*.026);top:${y}%;width:calc(var(--W)*.028);height:calc(var(--W)*.028);margin-top:calc(var(--W)*-.014);border-radius:50%;background:#cfcac3;box-shadow:inset 0 1px 2px rgba(0,0,0,.35)"></i>`).join('')}</div>`;
 let h='';for(let i=0;i<N;i++){let L,R;if(i==0){L=titleL();R=titleR()}else if(i<13){L=monthL(i-1);R=monthR(i-1)}else if(i==XM){L=xmasL();R=xmasR()}else{L=freeL();R=freeR()}
- h+=`<div class="sheet${i==XM?' xmas':''}" data-i="${i}"><div class="face"><div class="pnl pL" data-p="s${i}L">${L}<div class="sl"></div></div><div class="pnl pR" data-p="s${i}R">${R}<div class="sl"></div></div>${holes}<div class="shadeR"></div></div><div class="bface"></div></div>`}
+ h+=`<div class="sheet festive${i==0?' title':''}${i==XM?' xmas':''}" data-i="${i}"><div class="face"><div class="pnl pL" data-p="s${i}L">${L}<div class="sl"></div></div><div class="pnl pR" data-p="s${i}R">${R}<div class="sl"></div></div>${holes}<div class="shadeR"></div></div><div class="bface"></div></div>`}
 $('#sheets').innerHTML=h;const sheets=$$('.sheet');
 $('#rings').innerHTML=RING_Y.map(y=>`<i style="top:${y}%"></i>`).join('');
 $('#stack').innerHTML=[10,9,8,7,6,5,4,3,2,1].map(o=>`<i style="transform:translate(calc(var(--D)*${o/10}),calc(var(--D)*${o*.125}))" class="${o%2?'o':''}"></i>`).join('');
@@ -85,18 +111,22 @@ addEventListener('pointerdown',()=>{SFX.unlock();if(window.DeviceMotionEvent&&De
 // ===== layout =====
 const app=$('#app'),book=$('#book');let geo={};
 function layout(){const aw=app.clientWidth,ah=app.clientHeight;mode=(aw/ah<.9)?'port':'land';
- document.body.classList.toggle('portui',mode=='port');$('#tips').textContent=mode=='port'?'点封面打开 · 拖动翻页 · 点日期写字 · 拖贴纸贴上/拖出撕掉 · 摇一摇铃铛会响':'点封面打开 · 点挂件或铃铛会响 · 拖动背景转视角 · 拖动页面翻页 · 点日期直接写 · 拖贴纸到任意位置 · 拖出本子就撕掉 · 滚轮缩放贴纸';book.classList.toggle('port',mode=='port');$('#sheets').classList.toggle('port',mode=='port');
- if(mode=='land'){let h=Math.min(ah*.72,820),w=h*.72;const maxW=(aw-300)/2.05;if(w>maxW){w=maxW;h=w/.72}W=w;H=h;
-  geo={closedX:(aw-250)/2-W/2+10,openX:(aw-260-2*W)/2+W*.12,y:(ah-H)/2+2}}
- else{const top=84,bot=ah-100;let h=Math.min(bot-top,(aw*.8)/.72),w=h*.72;W=w;H=h;geo={closedX:(aw-W)/2+W*.02,openX:(aw-W)/2+W*.01,y:top+(bot-top-H)/2}}
+ document.body.classList.toggle('portui',mode=='port');app.classList.toggle('land-safe',mode=='land');
+ $('#tips').textContent=mode=='port'?'点封面打开 · 拖动翻页 · 点日期写字 · 拖贴纸贴上/拖出撕掉 · 摇一摇铃铛会响':'点封面打开 · 点挂件或铃铛会响 · 拖动背景转视角 · 拖动页面翻页 · 点日期直接写 · 拖贴纸到任意位置 · 拖出本子就撕掉 · 滚轮缩放贴纸';book.classList.toggle('port',mode=='port');$('#sheets').classList.toggle('port',mode=='port');
+ if(mode=='land'){const uiR=236,pad=28,topUI=122,botUI=136;
+  let h=Math.min(ah-topUI-botUI,780),w=h*.72;const maxW=(aw-uiR-pad*2)/3.08;if(w>maxW){w=maxW;h=w/.72}W=w;H=h;
+  const contentW=aw-uiR,openLeft=pad+Math.max(0,(contentW-pad-3*W)/2);
+  geo={closedX:Math.max(pad+W*.34, openLeft+W),openX:openLeft+W,y:topUI+Math.max(0,(ah-topUI-botUI-H)/2)}}
+ else{const top=84,bot=ah-108;let h=Math.min(bot-top,(aw*.78)/.72),w=h*.72;W=w;H=h;geo={closedX:(aw-W)/2+W*.02,openX:(aw-W)/2+W*.01,y:top+(bot-top-H)/2}}
  book.style.setProperty('--W',W+'px');rx0=mode=='port'?4:5;ry0=mode=='port'?-3:-4;if(!layout.done){rx=rx0;ry=ry0;layout.done=1;applyView()}book.style.setProperty('--H',H+'px');book.style.setProperty('--SW',(mode=='land'?2*W:W)+'px');
  $('#sheets').querySelectorAll('.sheet').forEach(s=>s.classList.toggle('port',mode=='port'));
  place()}
 function place(){const x=opened?geo.openX:geo.closedX,y=geo.y;book.style.left=x+'px';book.style.top=y+'px';
  const aw=app.clientWidth,ah=app.clientHeight,A=$('#stripA'),B=$('#stripB'),C=$('#count'),P=$('#panel');
- if(mode=='land'){A.style.cssText=`left:${Math.max(14,x-W*.38)}px;top:${Math.max(34,y-70)}px;--ss:36px`;A.querySelector('.strip').style.setProperty('--ss','34px');
-  B.style.cssText=`left:${Math.max(14,x+W*.12)}px;top:${Math.min(ah-112,y+H-18)}px`;B.querySelector('.strip').style.setProperty('--ss','24px');B.querySelectorAll('.si span').forEach(s=>s.style.display='none');
-  const right=Math.max(16,Math.min(aw*.06,90));C.style.cssText=`right:${right}px;top:${Math.max(40,y-40)}px`;P.style.cssText=`right:${right+24}px;top:${Math.max(40,y-40)+150}px`}
+ if(mode=='land'){const visL=opened?x-W:x;
+  A.style.cssText=`left:${Math.max(14,visL)}px;top:32px`;A.querySelector('.strip').style.setProperty('--ss','32px');A.querySelectorAll('.si span').forEach(s=>s.style.display='none');
+  B.style.cssText=`left:${Math.max(14,visL)}px;top:${y+H+22}px`;B.querySelector('.strip').style.setProperty('--ss','24px');B.querySelectorAll('.si span').forEach(s=>s.style.display='none');
+  C.style.cssText=`right:16px;top:${Math.max(40,y)}px`;P.style.cssText=`right:40px;top:${Math.max(40,y)+150}px`}
  else{A.style.cssText=`left:8px;top:24px`;A.querySelector('.strip').style.setProperty('--ss','32px');C.style.cssText=`right:8px;top:24px`;
   B.style.cssText=`left:8px;right:8px;bottom:48px`;B.querySelector('.strip').style.setProperty('--ss','36px');P.style.cssText=''}
  const fs=$('#fshadow');if(fs){const sw=(mode=='land'&&opened)?2*W:W;fs.style.cssText=`left:${x}px;top:${y}px;width:${sw}px;height:${H}px`}}
@@ -191,10 +221,12 @@ $('#count .pocket').onclick=e=>{const m=META[Math.floor(Math.random()*META.lengt
 let tt;function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>el.classList.remove('show'),1400*TS())}
 // ===== video helpers =====
 if(Q.get('finger')){const f=$('#finger');f.style.display='block';addEventListener('pointermove',e=>{f.style.left=e.clientX+'px';f.style.top=e.clientY+'px'},true);addEventListener('pointerdown',()=>{f.classList.add('dn');f.classList.remove('rip');void f.offsetWidth;f.classList.add('rip')},true);addEventListener('pointerup',()=>f.classList.remove('dn'),true)}
-function hook(){const fs=$('#fshadow');book.style.opacity='';[book,fs].forEach(e=>{e.classList.remove('drop');void e.offsetWidth;e.classList.add('drop')});
- setTimeout(()=>{SFX.thud()},470*TS());setTimeout(()=>ringBell(),560*TS());
- setTimeout(()=>{$('#cover').classList.add('pop');open();setTimeout(()=>$('#cover').classList.remove('pop'),900*TS())},1000*TS());
- setTimeout(()=>{go(XM,80)},1250*TS());setTimeout(()=>[book,fs].forEach(e=>e.classList.remove('drop')),1200*TS())}
+function hook(){const fs=$('#fshadow'),cv=$('#cover');book.style.opacity='';[book,fs].forEach(e=>{e.classList.remove('drop');void e.offsetWidth;e.classList.add('drop')});
+ setTimeout(()=>{SFX.thud()},470*TS());
+ setTimeout(()=>{cv.classList.add('shimmer')},720*TS());
+ setTimeout(()=>ringBell(),900*TS());
+ setTimeout(()=>{cv.classList.add('pop');open();setTimeout(()=>cv.classList.remove('pop','shimmer'),1200*TS())},1300*TS());
+ setTimeout(()=>[book,fs].forEach(e=>e.classList.remove('drop')),1200*TS())}
 const cam={s:1,ox:0,oy:0};
 function focus(el,fill=.9,maxS=2.4){const r0=(typeof el=='string'?$(el):el).getBoundingClientRect(),cs=parseFloat((getComputedStyle(app).transform.match(/matrix\(([^,]+)/)||[0,1])[1])||1,u=v=>({x:cam.ox+(v.x-cam.ox)/cs,y:cam.oy+(v.y-cam.oy)/cs}),p1=u({x:r0.left,y:r0.top}),p2=u({x:r0.right,y:r0.bottom}),r={left:p1.x,top:p1.y,width:p2.x-p1.x,height:p2.y-p1.y},aw=app.clientWidth,ah=app.clientHeight;
  const s=Math.min(maxS,fill*aw/r.width,fill*ah/r.height);if(s<=1.01){CP.camera(1);return 1}const cx=r.left+r.width/2,cy=r.top+r.height/2;
