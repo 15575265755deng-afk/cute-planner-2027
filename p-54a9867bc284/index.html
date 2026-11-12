@@ -1,0 +1,813 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>动物也上班的电子手帐本</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;background:#e8e3dc;font-family:"PingFang SC",sans-serif}
+canvas{display:block}
+.ui{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);display:flex;gap:10px}
+.ui button{border:0;padding:9px 18px;border-radius:20px;background:#3b2414;color:#f6e7d2;font-size:13px;cursor:pointer;box-shadow:0 4px 12px #0003}
+.hint{position:fixed;top:16px;width:100%;text-align:center;font-size:12px;color:#8a7d70;letter-spacing:2px;pointer-events:none}
+#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#8a7d70;letter-spacing:3px}
+#ink{position:fixed;z-index:20;background:rgba(255,253,240,.35);border:1.5px dashed rgba(47,99,168,.45);border-radius:3px;outline:none;resize:none;color:#24324f;font-family:"Kaiti SC","STKaiti","Bradley Hand",cursive;padding:0 2px;overflow:hidden;caret-color:#2f63a8}
+#ink[hidden]{display:none}
+#note{position:fixed;z-index:20;width:230px;background:#fffdf6;border-radius:6px;padding:10px 12px;box-shadow:0 10px 30px #0003;font-size:12px;color:#6b5a48}
+#note textarea{width:100%;height:70px;margin-top:6px;border:0;border-bottom:1px dashed #cbb;background:transparent;font:18px "Kaiti SC",cursive;color:#24324f;resize:none;outline:none}
+#note small{display:block;margin-top:4px;color:#aaa}
+/* liquid-glass folder holding the ins stickers */
+.folder{position:fixed;left:0;top:0;width:250px;height:168px;transform-origin:0 0;z-index:11;--mx:50%;--my:30%}
+.folder .gl{position:absolute;backdrop-filter:blur(9px) saturate(1.7) brightness(1.06);-webkit-backdrop-filter:blur(9px) saturate(1.7) brightness(1.06);
+  border:1px solid rgba(255,255,255,.75);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.95),inset 0 -12px 22px rgba(255,170,205,.18),0 12px 30px rgba(110,50,70,.16)}
+.folder .gl::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(120px 60px at var(--mx) var(--my),rgba(255,255,255,.55),transparent 70%),linear-gradient(115deg,transparent 28%,rgba(255,255,255,.35) 40%,transparent 50%)}
+.folder .tab{left:16px;top:6px;width:96px;height:30px;border-radius:14px 14px 0 0;background:linear-gradient(180deg,rgba(255,255,255,.4),rgba(255,214,232,.22));border-bottom:0;
+  font:600 11px/26px "PingFang SC";color:#b04a78;text-align:center;letter-spacing:1px}
+.folder .back{left:0;right:0;top:30px;bottom:0;border-radius:20px;background:linear-gradient(140deg,rgba(255,255,255,.34),rgba(255,206,226,.16))}
+.folder .peek{position:absolute;left:18px;right:18px;top:40px;height:80px;pointer-events:none}
+.folder .peek img{position:absolute;width:62px;height:62px;object-fit:contain;filter:drop-shadow(0 2px 2px rgba(0,0,0,.12))}
+.folder .pop{position:absolute;left:50%;top:52px;width:104px;height:104px;margin-left:-52px;opacity:0;transform:translateY(48px) scale(.6);
+  transition:transform .5s cubic-bezier(.25,1.7,.45,1),opacity .18s}
+.folder .pop .stkw{width:104px;height:104px}
+.folder.open .pop{opacity:1;transform:translateY(-70px) rotate(var(--r,-6deg)) scale(1)}
+.folder .front{left:-2px;right:-2px;bottom:0;height:96px;border-radius:16px 16px 22px 22px;
+  background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,228,240,.22) 60%,rgba(255,200,225,.3));
+  display:flex;align-items:flex-end;justify-content:space-between;padding:0 16px 12px;font:600 11px "PingFang SC";color:#a5486f;letter-spacing:1px;pointer-events:none}
+.folder .front b{font:800 22px/1 "Avenir Next","PingFang SC";color:#e0559a;letter-spacing:0}
+.folder .front::before{content:"";position:absolute;left:14px;right:14px;top:7px;height:2px;border-radius:2px;background:rgba(255,255,255,.95);box-shadow:0 0 6px #fff}
+.folder:hover .back{background:linear-gradient(140deg,rgba(255,255,255,.42),rgba(255,206,226,.22))}
+.strip{position:fixed;left:0;top:0;transform-origin:0 0;z-index:10;display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;border-radius:12px;
+  background:#fbf8f2;box-shadow:0 2px 3px #0002,0 10px 22px #0001;transition:opacity .3s}
+.strip::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:12px;background:linear-gradient(115deg,#fff0 30%,#ffffff4d 42%,#fff0 52%),linear-gradient(#fff3,#fff0 35%)}
+.strip .lab{background:var(--c);color:#fff;font:600 12px/1.25 "PingFang SC";border-radius:7px;padding:8px 6px;writing-mode:vertical-rl;letter-spacing:2px;align-self:stretch;text-align:center}
+.strip .row{display:grid;grid-template-columns:repeat(var(--cols,99),auto);gap:2px}
+.strip.v{flex-direction:column;padding:8px 8px 10px}
+.strip.v .lab{writing-mode:horizontal-tb;align-self:stretch;padding:6px 10px;letter-spacing:1px}
+.strip.v .row{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.stkw.refill .stk{animation:refill .45s ease-out}
+@keyframes refill{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:none}}
+.stkw{position:relative;display:block;width:58px;height:58px}
+.stk{width:100%;height:100%;display:block;touch-action:none;cursor:grab;transition:transform .15s;-webkit-user-drag:none}
+/* holographic foil: rainbow sheen confined to the sticker's own shape, slides with the pointer */
+.stkw.holo::after{content:"";position:absolute;inset:0;pointer-events:none;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat;
+  background:linear-gradient(115deg,#0000 22%,hsl(330 100% 78%/.6) 36%,hsl(200 100% 72%/.6) 45%,hsl(130 90% 72%/.55) 54%,hsl(48 100% 72%/.6) 63%,#0000 78%),
+    radial-gradient(circle at var(--hx,50%) var(--hy,50%),#fff8 0,#0000 40%);
+  background-size:320% 320%,100% 100%;background-position:var(--hx,50%) var(--hy,50%),0 0;mix-blend-mode:color-dodge;opacity:.85}
+/* peeled-off slot: the cream backing paper shows the die-cut shape */
+.stkw.used .stk{opacity:0;pointer-events:none}
+.stkw.used::before{content:"";position:absolute;inset:0;background:#e9e1d3;-webkit-mask:var(--m) center/contain no-repeat;mask:var(--m) center/contain no-repeat;
+  filter:drop-shadow(0 0 .5px #b9ab95)}
+.stkw.used::after{display:none}
+#pull{position:fixed;inset:0;width:100vw;height:100vh;z-index:29;pointer-events:none}
+.tape{position:fixed;left:0;top:0;width:200px;height:200px;transform-origin:0 0;z-index:11;cursor:grab}
+.tape img{width:100%;height:100%;transition:transform .25s;filter:drop-shadow(0 6px 6px rgba(80,40,20,.18))}
+.tape:hover img{transform:rotate(-6deg) translateY(-3px)}
+.tape span{position:absolute;left:0;right:0;bottom:-22px;text-align:center;font:600 13px "PingFang SC";color:#b04a3a;opacity:0;transition:opacity .2s}
+.tape:hover span{opacity:.85}
+#peel{position:fixed;z-index:30;pointer-events:none}
+.strip .stkw:not(.used) .stk:hover{transform:scale(1.06) rotate(-3deg)}
+#stTa{z-index:12}
+
+#drag{position:fixed;z-index:30;pointer-events:none;width:84px;height:84px;filter:drop-shadow(0 14px 10px #0004);animation:peel .35s ease-out forwards}
+@keyframes peel{0%{transform:translate(-50%,-50%) perspective(300px) rotateX(0) scale(.7)}60%{transform:translate(-50%,-50%) perspective(300px) rotateX(38deg) rotateZ(-8deg) scale(1.05)}100%{transform:translate(-50%,-50%) perspective(300px) rotateX(12deg) rotateZ(-4deg) scale(1)}}
+#toast{position:fixed;left:50%;top:44px;transform:translateX(-50%);z-index:40;background:#3b2414;color:#f6e7d2;border-radius:22px;padding:8px 10px 8px 18px;
+  font-size:13px;display:flex;align-items:center;gap:10px;box-shadow:0 8px 24px #0004}
+#toast[hidden]{display:none}
+#toast button{border:0;border-radius:14px;padding:5px 12px;background:#f6e7d2;color:#3b2414;font-size:12px;cursor:pointer}
+#toast #tx{background:transparent;color:#f6e7d2;font-size:16px;padding:0 6px}
+</style>
+<script type="importmap">{"imports":{"three":"./vendor/three@0.160.0/build/three.module.js","three/addons/":"./vendor/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="load">加载中…</div>
+<div id="filewarn" style="position:fixed;inset:0;z-index:99;background:#e9e7e3ee;display:none;align-items:center;justify-content:center;text-align:center;color:#3b2414;font:15px/1.9 'PingFang SC',sans-serif">
+<div>直接双击打开时，浏览器会拦截插画和贴纸图片，只能显示临时图。<br>请双击同文件夹里的 <b>「打开手账.command」</b>，<br>或在终端运行 <code>python3 -m http.server 8765</code> 后访问 localhost:8765</div></div>
+<script>if(location.protocol==='file:')document.getElementById('filewarn').style.display='flex'</script>
+<div class="hint">点封面打开 · 点挂件摇铃 · 拖动旋转视角 · 点蓝色标签换月份 · 点日期直接写 · 拖月份页翻页 · 拖贴纸到任意位置（可再揭起挪动，右键撕掉） · 滚轮缩放</div>
+<div id="stack"></div>
+<textarea id="ink" hidden spellcheck="false"></textarea>
+<div id="note" hidden><b></b><textarea placeholder="写下计划…（回车保存）"></textarea><small>Shift+回车换行 · 清空即删除</small></div>
+<div class="ui"><button id="b1">打开封面</button><button id="prev">‹</button><button id="next">›</button><button id="tg">收起贴纸栏</button><button id="bk">备份</button><button id="rs">恢复</button><input type="file" id="rsf" accept=".json,application/json" hidden></div>
+<div id="toast" hidden><span></span><button id="tbk">立即备份</button><button id="tx">×</button></div>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const W=10.5,H=14.8;               // A6 page in cm
+const renderer=new THREE.WebGLRenderer({antialias:true,logarithmicDepthBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color('#e9e7e3');
+const pmrem=new THREE.PMREMGenerator(renderer);
+{const env=new RoomEnvironment();const sb=new THREE.MeshBasicMaterial({color:0xffffff});sb.color.multiplyScalar(6);
+ [[-3,6,6,8,1.2],[4,5,-6,1.2,9],[0,9,0,12,0.6],[-7,3,5,2.2,7],[6,7,5,5,1.6],[0,8.5,10,14,1.4],[-8.5,0,10,1.4,14]].forEach(([x,y,z,w,h])=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),sb);m.position.set(x,y,z);m.lookAt(0,0,0);env.add(m)});
+ {const fm=new THREE.MeshBasicMaterial({color:0xffffff});fm.color.multiplyScalar(1.5);[[0,6,13,22,12],[-12,5,3,14,10],[12,5,3,14,10],[0,1.2,-9,20,2.4]].forEach(([x,y,z,w,h])=>{const f=new THREE.Mesh(new THREE.PlaneGeometry(w,h),fm);f.position.set(x,y,z);f.lookAt(0,0,0);env.add(f)})}   // front fill + side cards: polished steel needs bright things to mirror
+ scene.environment=pmrem.fromScene(env,0.02).texture}
+const camera=new THREE.PerspectiveCamera(30,innerWidth/innerHeight,4,400);
+camera.position.set(0,2,42);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.minDistance=14;controls.maxDistance=170;
+controls.minPolarAngle=0.9;controls.maxPolarAngle=1.75;controls.minAzimuthAngle=-0.9;controls.maxAzimuthAngle=0.9;
+
+// lights: one warm key from upper-left (flat-lay product shot), soft fill
+const key=new THREE.DirectionalLight('#fff1dc',2.3);key.position.set(-14,18,34);key.castShadow=true;
+key.shadow.mapSize.set(2048,2048);Object.assign(key.shadow.camera,{left:-42,right:42,top:18,bottom:-18,near:5,far:90});
+key.shadow.radius=5;key.shadow.bias=-0.0006;key.shadow.normalBias=0.02;
+scene.add(key,new THREE.HemisphereLight('#ffffff','#cfc6ba',0.4));
+
+
+/* ---------- canvas textures ---------- */
+const CW=1024,CH=Math.round(1024*H/W);
+const MONTHS=['JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE','JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER'];
+const HOL={'1-1':'元旦','2-6':'春节','2-14':'情人节','4-5':'清明','5-1':'劳动节','6-9':'端午','9-15':'中秋','10-1':'国庆','12-25':'圣诞'};
+function mkCanvas(){const c=document.createElement('canvas');c.width=CW;c.height=CH;return c}
+let PAPER=null;   // paper grain computed once, so pages can be redrawn every frame while a sticker settles
+function paperBase(g){if(!PAPER){PAPER=document.createElement('canvas');PAPER.width=CW;PAPER.height=CH;const pg=PAPER.getContext('2d');
+    pg.fillStyle='#fbf9f4';pg.fillRect(0,0,CW,CH);const id=pg.getImageData(0,0,CW,CH),d=id.data;
+    for(let i=0;i<d.length;i+=4){const n=(Math.random()-.5)*10;d[i]+=n;d[i+1]+=n;d[i+2]+=n}pg.putImageData(id,0,0)}
+  g.drawImage(PAPER,0,0)}
+function tex(c){const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t}
+const RINGF=[.2,.29,.38,.62,.71,.8];
+const F='"PingFang SC","Helvetica Neue",sans-serif';
+let month=0;
+const cvIntro=mkCanvas(),cvL=mkCanvas(),cvR=mkCanvas(),cvBack=mkCanvas(),cvPlain=mkCanvas();
+const tIntro=tex(cvIntro),tL=tex(cvL),tR=tex(cvR),tBack=tex(cvBack),tPlain=tex(cvPlain);
+function holes(g){RINGF.forEach(f=>{const y=f*CH,gr=g.createRadialGradient(37,y-3,3,40,y,21);gr.addColorStop(0,'#2e2a26');gr.addColorStop(.75,'#5a544c');gr.addColorStop(1,'#9a9389');
+  g.fillStyle=gr;g.beginPath();g.arc(40,y,22,0,7);g.fill();g.strokeStyle='rgba(255,255,255,.7)';g.lineWidth=1.5;g.beginPath();g.arc(40,y,23,.3,2.2);g.stroke()})}
+function drawIntro(){const g=cvIntro.getContext('2d');paperBase(g);holes(g);
+  const days=new Date(2027,month+1,0).getDate(),mm=String(month+1).padStart(2,'0');
+  g.fillStyle='#231a14';g.font=`900 118px "Arial Black",${F}`;g.fillText('20',100,200);g.fillText('27',100,315);
+  g.fillRect(300,110,4,210);g.font=`600 54px ${F}`;g.fillText(MONTHS[month],330,170);
+  g.font=`500 36px ${F}`;g.fillText(`${mm}/01`,330,250);g.fillText(`${mm}/${days}`,330,305);
+  g.strokeStyle='#2f63a8';g.lineWidth=4;g.beginPath();g.arc(910,250,40,0,7);g.stroke();g.fillStyle='#2f63a8';g.font=`600 36px ${F}`;g.textAlign='center';g.fillText(month+1,910,263);
+  // watercolor-ish cat at desk
+  loadIllus(month);if(illus[month]===null){}else if(illus[month]){const im=illus[month],bw=760,bh=760*im.height/im.width;g.globalCompositeOperation='multiply';g.drawImage(im,(CW-bw)/2+20,440,bw,Math.min(bh,720));g.globalCompositeOperation='source-over'}else{
+  const hue=['#e9a04a','#8f9aa6','#c98a5a','#d9b48a'][month%4];
+  g.save();g.translate(CW/2+10,800);g.globalAlpha=.55;g.fillStyle='#e8b4ad';g.beginPath();g.ellipse(0,240,260,40,0,0,7);g.fill();g.globalAlpha=1;
+  g.fillStyle='#4fa59a';g.fillRect(-240,110,480,46);g.strokeStyle='#333';g.lineWidth=7;g.beginPath();g.moveTo(-200,156);g.lineTo(-200,240);g.moveTo(200,156);g.lineTo(200,240);g.stroke();
+  g.fillStyle=hue;g.lineWidth=8;g.beginPath();g.moveTo(-110,110);g.quadraticCurveTo(-130,-160,0,-175);g.quadraticCurveTo(130,-160,110,110);g.closePath();g.fill();g.stroke();
+  [[-1],[1]].forEach(([s])=>{g.beginPath();g.moveTo(s*70,-140);g.lineTo(s*95,-230);g.lineTo(s*20,-170);g.fill();g.stroke()});
+  g.fillStyle='#d2453a';g.save();g.rotate(-.06);g.fillRect(-105,-185,210,26);g.restore();
+  g.fillStyle='#222';g.beginPath();g.arc(-42,-95,10,0,7);g.arc(42,-95,10,0,7);g.fill();
+  g.beginPath();g.moveTo(-14,-60);g.quadraticCurveTo(0,-45,14,-60);g.stroke();
+  g.strokeStyle=hue;g.lineWidth=30;g.lineCap='round';g.beginPath();g.moveTo(100,60);g.quadraticCurveTo(220,40,200,-90);g.stroke();
+  g.fillStyle='#a8cde0';g.strokeStyle='#333';g.lineWidth=7;g.beginPath();g.arc(230,-300,70,0,7);g.fill();g.stroke();
+  g.beginPath();g.moveTo(230,-340);g.lineTo(230,-300);g.lineTo(262,-280);g.stroke();g.restore();
+  }
+  g.fillStyle='#231a14';g.font=`700 92px Georgia,serif`;g.textAlign='center';g.fillText('#'+MONTHS[month],CW/2+20,1270);
+  g.font=`500 24px ${F}`;g.textAlign='left';g.fillText('A6  WEEKLY | MONTHLY',100,1380);g.textAlign='right';g.fillText('▸▸▸',950,1380);g.textAlign='left';
+  tIntro.needsUpdate=true}
+let EDITK=null;
+const NOTES=load('pn27-notes',{}),STK=load('pn27-stickers',[]);let CELLS=[];
+function load(k,d){try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}}
+function save(){try{localStorage.setItem('pn27-notes',JSON.stringify(NOTES));localStorage.setItem('pn27-stickers',JSON.stringify(STK))}catch(e){}}
+const HAND='"Kaiti SC","STKaiti","Bradley Hand","Marker Felt",cursive';
+function hand(g,txt,x,y,maxW,seed){g.save();g.fillStyle='#24324f';g.font=`30px ${HAND}`;
+  let line='',ly=y,i=0;const lines=[];for(const ch of txt){if(ch=='\n'||g.measureText(line+ch).width>maxW){lines.push(line);line=ch=='\n'?'':ch}else line+=ch}lines.push(line);
+  lines.slice(0,3).forEach(l=>{g.save();g.translate(x,ly);g.rotate(Math.sin(seed+i++)*.03);g.fillText(l,0,0);g.restore();ly+=34});g.restore()}
+function drawGrid(c,cols,isRight){const g=c.getContext('2d');paperBase(g);
+  const days=new Date(2027,month+1,0).getDate(),first=(new Date(2027,month,1).getDay()+6)%7,rows=Math.ceil((first+days)/7);
+  const x0=isRight?0:50,x1=isRight?CW-110:CW,y0=80,y1=CH-110,hh=60,cw=(x1-x0)/cols.length,rh=(y1-y0-hh)/rows;
+  const hd=['Mon.','Tue.','Wed.','Thur.','Fri.','Sat.','Sun.'];
+  cols.forEach((col,i)=>{const x=x0+i*cw;
+    if(col==5){g.fillStyle='#e6f1f7';g.fillRect(x,y0,cw,y1-y0)}if(col==6){g.fillStyle='#faebf1';g.fillRect(x,y0,cw,y1-y0)}
+    g.fillStyle=col==5?'#3a76b8':col==6?'#c0507a':'#222';g.font=`600 30px ${F}`;g.textAlign='center';g.fillText(hd[col],x+cw/2,y0+42);g.textAlign='left';
+    for(let r=0;r<rows;r++){const d=r*7+col-first+1,y=y0+hh+r*rh;if(d>=1&&d<=days)CELLS.push({c,x,y,w:cw,h:rh,d});
+      g.strokeStyle='#ddd';g.setLineDash([8,8]);g.lineWidth=2;g.beginPath();g.moveTo(x+14,y+rh*.55);g.lineTo(x+cw-14,y+rh*.55);g.stroke();g.setLineDash([]);
+      if(d>=1&&d<=days){g.fillStyle='#222';g.font=`600 30px ${F}`;g.fillText(d,x+12,y+38);
+        const h=HOL[`${month+1}-${d}`];if(h){g.fillStyle='#c0507a';g.font=`500 20px ${F}`;g.fillText(h,x+12,y+64)}
+        const n=EDITK===`${month+1}-${d}`?'':NOTES[`${month+1}-${d}`];if(n)hand(g,n,x+12,y+(h?96:80),cw-20,d*7+month)}}});
+  g.strokeStyle='#cfcac2';g.lineWidth=2;
+  for(let i=1;i<cols.length;i++){g.beginPath();g.moveTo(x0+i*cw,y0);g.lineTo(x0+i*cw,y1);g.stroke()}
+  for(let r=0;r<rows;r++){g.beginPath();g.moveTo(x0,y0+hh+r*rh);g.lineTo(x1,y0+hh+r*rh);g.stroke()}
+  g.strokeStyle='#333';g.lineWidth=4;g.beginPath();g.moveTo(x0,y0);g.lineTo(x1,y0);g.moveTo(x0,y1);g.lineTo(x1,y1);
+  isRight?(g.moveTo(x1,y0),g.lineTo(x1,y1)):(g.moveTo(x0,y0),g.lineTo(x0,y1));g.stroke();
+  if(isRight){g.fillStyle='#2f63a8';g.fillRect(CW-70,0,70,CH);const th=CH/12;
+    for(let i=0;i<12;i++){if(i==month){g.fillStyle='#fbf9f4';g.fillRect(CW-70,i*th,70,th)}
+      g.fillStyle=i==month?'#2f63a8':'#fff';g.font=`600 28px ${F}`;g.textAlign='center';g.fillText(i+1,CW-35,i*th+th/2+10);
+      g.strokeStyle='#ffffff55';g.beginPath();g.moveTo(CW-70,i*th);g.lineTo(CW,i*th);g.stroke()}g.textAlign='left'}
+  else{g.fillStyle='#999';g.font=`22px ${F}`;g.fillText('● 新月   ◐ 上弦   ○ 满月   ◑ 下弦',60,CH-60)}}
+function crease(c,left,right){const g=c.getContext('2d');
+  if(left){const gr=g.createLinearGradient(0,0,60,0);gr.addColorStop(0,'rgba(90,70,50,.18)');gr.addColorStop(1,'rgba(90,70,50,0)');g.fillStyle=gr;g.fillRect(0,0,60,CH)}
+  if(right){const gr=g.createLinearGradient(CW-60,0,CW,0);gr.addColorStop(0,'rgba(255,255,255,0)');gr.addColorStop(1,'rgba(90,70,50,.14)');g.fillStyle=gr;g.fillRect(CW-60,0,60,CH)}}
+const illus={};
+function loadIllus(m){if(illus[m]!==undefined)return;illus[m]=null;const im=new Image();
+  im.onload=()=>{illus[m]=im;if(m===month)drawAll()};im.onerror=()=>{illus[m]=false;if(m===month)drawAll()};im.src=`illustrations/${String(m+1).padStart(2,'0')}.jpg`}
+for(let m=0;m<12;m++)loadIllus(m);   // preload every month's illustration
+function drawAll(){CELLS=[];drawIntro();drawGrid(cvL,[0,1,2,3],false);drawGrid(cvR,[4,5,6],true);crease(cvIntro,false,true);crease(cvL,true,true);crease(cvR,true,false);drawPlaced();tIntro.needsUpdate=tL.needsUpdate=tR.needsUpdate=true}
+{const g=cvBack.getContext('2d');paperBase(g);g.textAlign='center';g.fillStyle='#cbbfae';g.font='300 170px Georgia';g.fillText('2027',CW/2,CH*.16);
+ g.fillStyle='#9a8f82';g.font=`36px ${F}`;g.fillText('今 天 动 物 要 上 班',CW/2,CH*.16+80);g.font=`26px ${F}`;g.fillText('点击展开 ▸',CW/2,CH*.16+140)}
+{const g=cvPlain.getContext('2d');paperBase(g)}
+drawAll();
+
+/* ---------- book ---------- */
+const rig=new THREE.Group();scene.add(rig);const book=new THREE.Group();rig.add(book);
+const paperMat=m=>new THREE.MeshStandardMaterial({map:m,roughness:.95,envMapIntensity:.6});
+const T=0.04; // sheet thickness
+function sheet(front,back){const g=new THREE.Group();
+  const a=new THREE.Mesh(new THREE.PlaneGeometry(W,H),paperMat(front));a.position.set(W/2,0,T/2);
+  const b=new THREE.Mesh(new THREE.PlaneGeometry(W,H),paperMat(back));b.rotation.y=Math.PI;b.position.set(W/2,0,-T/2);
+  const edge=new THREE.Mesh(new THREE.BoxGeometry(W-0.02,H-0.02,T*.4),new THREE.MeshStandardMaterial({color:'#efe9df',roughness:1}));edge.position.x=W/2;
+  [a,b].forEach(m=>{m.castShadow=m.receiveShadow=true;g.add(m)});return {g,front:a,back:b}}
+const s1=sheet(tIntro,tPlain);book.add(s1.g);
+const piv2=new THREE.Group();piv2.position.set(W,0,0);s1.g.add(piv2);
+const s2=sheet(tL,tBack);piv2.add(s2.g);
+const piv3=new THREE.Group();piv3.position.set(W,0,0);s2.g.add(piv3);
+const s3=sheet(tR,tPlain);piv3.add(s3.g);
+// small page stack under panel 1 gives thickness
+const edgeTex=vert=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');g.fillStyle='#f4efe6';g.fillRect(0,0,128,128);
+  for(let i=0;i<128;i+=2){g.fillStyle=`rgba(120,105,85,${.10+Math.random()*.22})`;vert?g.fillRect(i,0,1,128):g.fillRect(0,i,128,1)}const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t};
+const edgeM=v=>new THREE.MeshStandardMaterial({map:edgeTex(v),roughness:1,envMapIntensity:.4}),plainM=new THREE.MeshStandardMaterial({color:'#f3eee5',roughness:1});
+const stack=new THREE.Mesh(new THREE.BoxGeometry(W,H,0.32),[edgeM(true),edgeM(true),edgeM(false),edgeM(false),plainM,plainM]);
+stack.position.set(W/2,0,-0.165);stack.castShadow=stack.receiveShadow=true;book.add(stack);
+
+// desk: the whole flat-lay tilts together, shadows land right under the book
+const desk=new THREE.Mesh(new THREE.PlaneGeometry(600,600),new THREE.MeshStandardMaterial({color:'#e9e7e3',roughness:.95,envMapIntensity:.5}));
+desk.position.z=-0.66;desk.receiveShadow=true;book.add(desk);
+// ins-style stickers tossed on the desk around the notebook: random tilt, overlapping, a few tucked under the book edge
+
+// ring mechanism: polished steel plate, 3+3 rings through the punched holes, two rivets
+// Ring mechanism, modelled on a real 6-ring binder: brushed back plate with a polished raised rib,
+// thick mirror-polished rings (each closes with a hairline seam at the top), two eyelets and the opening levers at both ends.
+const RR=0.78,RT=0.13,RCX=-0.344,RCZ=0.2;     // ring radius / tube radius / centre — rings cross the page plane exactly at the punched holes
+const chrome=new THREE.MeshPhysicalMaterial({color:'#f6f6f4',metalness:1,roughness:.055,envMapIntensity:1.7});
+const brushed=new THREE.MeshPhysicalMaterial({color:'#d8d8d4',metalness:1,roughness:.34,envMapIntensity:1.2});
+const darkM=new THREE.MeshStandardMaterial({color:'#1f1c19',roughness:.7,metalness:.4});
+const steel=chrome,mech=new THREE.Group();book.add(mech);
+{const add=(geo,mat,x,y,z,sh=true)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=sh;m.receiveShadow=true;mech.add(m);return m};
+ add(new RoundedBoxGeometry(1.5,H-0.9,0.07,4,0.035),brushed,RCX,0,-0.40);
+ const ribM=new THREE.MeshPhysicalMaterial({color:'#ececea',metalness:1,roughness:.16,envMapIntensity:1.5});
+ const rib=add(new THREE.CapsuleGeometry(0.36,H-2.9,10,32),ribM,RCX,0,-0.385);rib.scale.z=0.3;
+ RINGF.forEach(f=>{const y=H/2-f*H;
+   const r=add(new THREE.TorusGeometry(RR,RT,28,120),chrome,RCX,y,RCZ);r.rotation.x=Math.PI/2;
+   const sg=new THREE.TorusGeometry(RR,RT+0.003,16,4,0.022);sg.rotateZ(Math.PI/2-0.011);const sm=add(sg,darkM,RCX,y,RCZ,false);sm.rotation.x=Math.PI/2;   // closing seam
+   [-1,1].forEach(d=>{const boot=add(new THREE.CylinderGeometry(RT*1.5,RT*1.75,0.1,20),brushed,RCX+d*RR*0.985,y,-0.33,false);boot.rotation.x=Math.PI/2})});   // collars where rings enter the plate
+ [1,-1].forEach(sg=>{const y=sg*(H/2-0.245*H);
+   add(new THREE.TorusGeometry(0.17,0.055,14,36),chrome,RCX,y,-0.262,false);add(new THREE.CircleGeometry(0.125,24),darkM,RCX,y,-0.268,false);   // eyelets
+   const lv=add(new THREE.CapsuleGeometry(0.24,0.42,8,24),ribM,RCX,sg*(H/2-0.3),-0.36);lv.scale.z=0.22;lv.rotation.x=-sg*0.16})}                            // opening levers
+
+/* ---------- soft translucent coffee PVC shell ---------- */
+const CVW=W+0.9,CVH=H+0.8,CVT=0.12,SPINE=-0.55,COVZ=1.16,SPR=(COVZ+0.5)/2;
+const coverPiv=new THREE.Group();coverPiv.position.set(SPINE,0,0);book.add(coverPiv);
+const cover=new THREE.Group();cover.position.set(CVW/2,0,COVZ);coverPiv.add(cover);
+// What sells soft PVC:
+//  1. colour comes from absorption (attenuation), so stacked layers get deeper and thin welded edges glow amber
+//  2. the film is never flat — a low-frequency normal map makes reflections wobble
+//  3. thick rounded hems + an inset weld seam refract a bright rim
+//  4. broad softbox reflections sliding over a very glossy surface
+function wobbleNormal(size,ridge,seed){const c=document.createElement('canvas');c.width=c.height=size;const g=c.getContext('2d'),id=g.createImageData(size,size),d=id.data;
+  const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647,waves=[];
+  for(let i=0;i<9;i++)waves.push({fx:Math.round(rnd()*6-3),fy:Math.round(rnd()*6-3)||1,a:.5+rnd(),p:rnd()*6.28});
+  for(let y=0;y<size;y++)for(let x=0;x<size;x++){const u=x/size,v=y/size;let dx=0,dy=0;
+    for(const w of waves){const k=Math.cos(6.2832*(w.fx*u+w.fy*v)+w.p)*w.a;dx+=k*w.fx;dy+=k*w.fy}
+    dx*=.035;dy*=.035;
+    if(ridge){const t=(u-.085)/.02;dx+=-t*Math.exp(-t*t/2)*1.5}          // crease where the film bends over the rings
+    const l=Math.hypot(dx,dy,1),i=(y*size+x)*4;d[i]=(-dx/l*.5+.5)*255;d[i+1]=(-dy/l*.5+.5)*255;d[i+2]=(1/l*.5+.5)*255;d[i+3]=255}
+  g.putImageData(id,0,0);return new THREE.CanvasTexture(c)}
+// layer map: how many films light passes through (inner pockets) → drives absorption depth
+const layerCv=document.createElement('canvas');layerCv.width=512;layerCv.height=Math.round(512*CVH/CVW);
+const pocketShapes=(g,w,h)=>[()=>g.rect(w*.42,h*.03,w*.23,h*.94),()=>g.roundRect(w*.27,h*.56,w*.62,h*.5,[w*.2,w*.03,0,0]),()=>g.rect(w*.88,h*.03,w*.09,h*.94)];
+{const g=layerCv.getContext('2d'),w=layerCv.width,h=layerCv.height;g.fillStyle='rgb(128,128,128)';g.fillRect(0,0,w,h);g.globalCompositeOperation='lighter';
+ pocketShapes(g,w,h).forEach((fn,i)=>{g.fillStyle=['rgb(52,52,52)','rgb(38,38,38)','rgb(22,22,22)'][i];g.beginPath();fn();g.fill()})}
+const pvc={color:'#ffffff',transmission:1,ior:1.5,roughness:.06,attenuationColor:'#93703a',attenuationDistance:.25,specularIntensity:1,envMapIntensity:1.25};
+const coverMat=new THREE.MeshPhysicalMaterial({...pvc,thickness:.9,thicknessMap:new THREE.CanvasTexture(layerCv),normalMap:wobbleNormal(256,true,7),normalScale:new THREE.Vector2(.14,.14)});
+const shellMat=new THREE.MeshPhysicalMaterial({...pvc,thickness:.45,normalMap:wobbleNormal(256,false,19),normalScale:new THREE.Vector2(.14,.14)});
+const hemMat=new THREE.MeshPhysicalMaterial({...pvc,thickness:.14,roughness:.04});      // single welded edge → lighter, golden
+const pocketMat=new THREE.MeshPhysicalMaterial({...pvc,thickness:.65,normalMap:shellMat.normalMap,normalScale:new THREE.Vector2(.25,.25)});
+const acrylic=shellMat;
+function rrPts(hw,hh,r,n=10){const pts=[];for(let a=0;a<4;a++){const cx=(a==0||a==3)?hw-r:-hw+r,cy=(a<2)?hh-r:-hh+r;
+  for(let k=0;k<=n;k++){const t=a*Math.PI/2+k/n*Math.PI/2;pts.push([cx+Math.cos(t)*r,cy+Math.sin(t)*r])}}return pts}
+const CR=0.45;                                                             // corner radius
+function film(w,h,bulge,flipU){const g=new THREE.PlaneGeometry(w,h,64,88),pp=g.attributes.position,uv=g.attributes.uv,hw=w/2,hh=h/2;
+  for(let i=0;i<pp.count;i++){let x=pp.getX(i),y=pp.getY(i);
+    if(Math.abs(x)>hw-CR&&Math.abs(y)>hh-CR){const cx=Math.sign(x)*(hw-CR),cy=Math.sign(y)*(hh-CR),dx=x-cx,dy=y-cy,l=Math.hypot(dx,dy);
+      if(l>CR){x=cx+dx/l*CR;y=cy+dy/l*CR;pp.setXY(i,x,y)}}                 // round the corners of the sheet
+    const nx=x/hw,ny=y/hh,ed=Math.min(1,Math.min(hw-Math.abs(x),hh-Math.abs(y))/0.7),roll=(1-ed*ed*(3-2*ed));
+    pp.setZ(i,bulge*(1-nx*nx)*(1-ny*ny*ny*ny)-Math.sign(bulge||1)*0.13*roll*roll+(bulge>0?0.11:-0.11)*0);
+    if(flipU)uv.setX(i,1-uv.getX(i))}
+  g.computeVertexNormals();return g}
+const loop=(pts,rad,seg=260)=>new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts,true,'centripetal'),seg,rad,12,true);
+function shell(w,h,bulge,mat){const grp=new THREE.Group();
+  const outer=new THREE.Mesh(film(w,h,bulge,false),mat);outer.position.z=0.02+Math.sign(bulge)*0.1;
+  const inner=new THREE.Mesh(film(w,h,-bulge,true),mat);inner.rotation.y=Math.PI;inner.position.z=-0.02+Math.sign(bulge)*0.1;   // back face, same physical layers
+  const hem=new THREE.Mesh(loop(rrPts(w/2-0.03,h/2-0.03,CR).map(([x,y])=>new THREE.Vector3(x,y,0)),0.07),hemMat);hem.scale.z=0.75;
+  const seam=new THREE.Mesh(loop(rrPts(w/2-0.34,h/2-0.34,CR-0.2).map(([x,y])=>new THREE.Vector3(x,y,0)),0.024),hemMat);seam.scale.z=1.6;   // weld line
+  grp.add(outer,inner,hem,seam);grp.userData.pick=[outer,inner];return grp}
+const coverShell=shell(CVW,CVH,0.06,coverMat);cover.add(coverShell);const coverMesh=coverShell.userData.pick[0];
+// back cover: pages & rings sit on it, it frames the pages when open
+const backShell=shell(CVW,CVH,-0.03,shellMat);backShell.position.set(SPINE+CVW/2,0,-0.5);book.add(backShell);
+// spine: half-tube of film wrapping the rings (relaxes flat when the cover opens)
+const spineMat=new THREE.MeshPhysicalMaterial({...pvc,thickness:.45,normalMap:shellMat.normalMap,normalScale:new THREE.Vector2(.5,.5)});
+const spineMesh=new THREE.Mesh(new THREE.CylinderGeometry(SPR,SPR,CVH-0.5,48,1,true,Math.PI,Math.PI),spineMat);
+spineMesh.position.set(SPINE,0,COVZ-SPR);book.add(spineMesh);
+const spineDeco=new THREE.Group();spineMesh.add(spineDeco);
+{const studM=new THREE.MeshPhysicalMaterial({color:'#f2f2f0',metalness:1,roughness:.08,envMapIntensity:1.8}),PH=0.72;
+ [1,-1].forEach(sg=>{const st=new THREE.Group();st.position.set(-(SPR+0.004)*Math.sin(PH),sg*0.255*H,(SPR+0.004)*Math.cos(PH));st.rotation.y=-PH;
+   const dome=new THREE.Mesh(new THREE.SphereGeometry(0.2,32,16,0,Math.PI*2,0,Math.PI/2),studM);dome.rotation.x=Math.PI/2;dome.scale.y=.5;
+   const rim=new THREE.Mesh(new THREE.TorusGeometry(0.235,0.04,12,40),studM);
+   const ripple=new THREE.Mesh(new THREE.TorusGeometry(0.4,0.045,10,48),hemMat);ripple.scale.set(1,2.1,.5);   // film pulled tight around the press stud
+   st.add(dome,rim,ripple);spineDeco.add(st)});
+ // the long wobbly streak of light that runs down a soft plastic tube
+ const hc=document.createElement('canvas');hc.width=64;hc.height=512;const hg=hc.getContext('2d');
+ [[22,7,.75,3],[40,3,.5,1.5],[30,16,.28,7]].forEach(([x0,w,al,bl])=>{hg.filter=`blur(${bl}px)`;hg.strokeStyle=`rgba(255,244,222,${al})`;hg.lineWidth=w;hg.lineCap='round';hg.beginPath();
+   for(let y=24;y<=488;y+=8){const x=x0+Math.sin(y*.021+x0)*5+Math.sin(y*.063)*2.5;y==24?hg.moveTo(x,y):hg.lineTo(x,y)}hg.stroke()});
+ const streak=new THREE.Mesh(new THREE.CylinderGeometry(SPR+0.006,SPR+0.006,CVH-0.8,24,1,true,Math.PI*1.66,Math.PI*0.27),
+   new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(hc),transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:.55}));spineDeco.add(streak);
+ const lc=document.createElement('canvas');lc.width=256;lc.height=64;const lg=lc.getContext('2d');lg.fillStyle='rgba(255,248,236,.9)';lg.font='600 34px "Avenir Next","PingFang SC"';lg.textAlign='center';lg.fillText('2027',128,44);
+ const logo=new THREE.Mesh(new THREE.PlaneGeometry(1.0,.25),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(lc),transparent:true,depthWrite:false}));
+ logo.position.set(-(SPR+0.01)*Math.sin(.45),-CVH*.43,(SPR+0.01)*Math.cos(.45));logo.rotation.set(0,-.45,Math.PI/2);spineDeco.add(logo)}
+// card pocket welded inside the back cover
+const pocket=shell(CVW*0.9,CVH*0.38,0.015,pocketMat);pocket.position.set(SPINE+CVW/2+0.2,-CVH*0.3,-0.4);book.add(pocket);
+// The cover is a tri-fold: a third flap hinged on the back cover's right edge wraps in over the pages, under the front cover.
+const FW=CVW*0.58,flapPiv=new THREE.Group();flapPiv.position.set(SPINE+CVW,0,0.32);flapPiv.rotation.y=-Math.PI*.995;book.add(flapPiv);
+const flapMat=new THREE.MeshPhysicalMaterial({...pvc,thickness:.27,normalMap:shellMat.normalMap,normalScale:new THREE.Vector2(.2,.2)});
+const flap=shell(FW,CVH-0.12,0.03,flapMat);flap.position.x=FW/2;flapPiv.add(flap);
+{const slot=shell(FW*0.8,CVH*0.34,0.012,shellMat);slot.position.set(FW*0.02,-CVH*0.3,0.07);flap.add(slot);          // card slot welded on the flap
+ const loopM=new THREE.Mesh(new THREE.TorusGeometry(0.42,0.05,10,40,Math.PI),hemMat);loopM.rotation.set(Math.PI/2,0,0);loopM.scale.y=1.5;loopM.position.set(FW*0.36,CVH*0.18,0.02);flap.add(loopM)}  // pen loop
+
+// screen print (white ink) + the thin light lines along welded pocket seams
+const glCv=document.createElement('canvas');glCv.width=512;glCv.height=700;{const g=glCv.getContext('2d');
+  const wav=(x0,y0,x1,y1,amp,w,a,blur)=>{g.filter=`blur(${blur}px)`;g.strokeStyle=`rgba(255,246,228,${a})`;g.lineWidth=w;g.lineCap='round';g.beginPath();
+    for(let i=0;i<=40;i++){const t=i/40,x=x0+(x1-x0)*t,y=y0+(y1-y0)*t,n=Math.sin(t*9.4+x0*.05)*amp+Math.sin(t*23+y0*.03)*amp*.35,dx=y1-y0,dy=-(x1-x0),l=Math.hypot(dx,dy)||1;
+      i?g.lineTo(x+dx/l*n,y+dy/l*n):g.moveTo(x+dx/l*n,y+dy/l*n)}g.stroke()};
+  wav(70,90,430,60,10,26,.5,14);wav(80,96,420,70,8,5,.75,2.5);          // broad sweep along the top
+  wav(60,130,90,600,9,18,.4,12);wav(66,150,92,560,7,3.5,.7,2);          // spine-side sag
+  wav(215,330,235,650,6,10,.32,8);wav(338,60,330,640,5,3,.5,2);         // along the pocket seams
+  wav(150,400,430,395,7,12,.3,9);wav(440,120,455,560,6,4,.55,2.5);
+  [[120,250,26],[400,300,20],[300,560,24]].forEach(([x,y,r])=>{g.filter='blur(10px)';g.fillStyle='rgba(255,246,228,.28)';g.beginPath();g.ellipse(x,y,r,r*.45,-.5,0,7);g.fill()})}
+const glTex=new THREE.CanvasTexture(glCv);glTex.colorSpace=THREE.SRGBColorSpace;
+const glareM=()=>new THREE.MeshBasicMaterial({map:glTex,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,opacity:.2});
+const printCv=document.createElement('canvas');printCv.width=1024;printCv.height=Math.round(1024*CVH/CVW);
+const printTex=tex(printCv);
+const printMat=new THREE.MeshStandardMaterial({map:printTex,transparent:true,roughness:.5,depthWrite:false,emissive:'#ffffff',emissiveMap:printTex,emissiveIntensity:.22});
+const print=new THREE.Mesh(film(CVW,CVH,0.06,false),printMat);print.position.z=0.13;cover.add(print);
+const glare=new THREE.Mesh(film(CVW,CVH,0.06,false),glareM());glare.position.z=0.135;cover.add(glare);
+const glareIn=new THREE.Mesh(film(CVW,CVH,-0.06,true),glareM());glareIn.rotation.y=Math.PI;glareIn.position.z=0.065;cover.add(glareIn);
+const printIn=new THREE.Mesh(film(CVW,CVH,-0.06,true),printMat.clone());printIn.material.opacity=.5;printIn.rotation.y=Math.PI;printIn.position.z=0.07;cover.add(printIn); // seen mirrored from inside
+function drawPrint(img){const g=printCv.getContext('2d'),w=printCv.width,h=printCv.height;g.clearRect(0,0,w,h);
+  pocketShapes(g,w,h).forEach(fn=>{g.lineWidth=2.5;g.strokeStyle='rgba(255,214,160,.30)';g.beginPath();fn();g.stroke();
+    g.save();g.translate(3,0);g.lineWidth=2;g.strokeStyle='rgba(30,10,0,.22)';g.beginPath();fn();g.stroke();g.restore()});
+  if(img){const iw=w*.5,ih=iw*img.height/img.width;g.globalAlpha=.95;g.drawImage(img,w*.535-iw/2,h*.27,iw,ih);g.globalAlpha=1}
+  [.075,.3,.58].forEach(fx=>{const x=w*fx,gr=g.createLinearGradient(x-14,0,x+14,0);gr.addColorStop(0,'rgba(255,230,190,0)');gr.addColorStop(.45,'rgba(255,236,205,.32)');
+    gr.addColorStop(.55,'rgba(40,15,0,.28)');gr.addColorStop(1,'rgba(40,15,0,0)');g.fillStyle=gr;g.fillRect(x-14,0,28,h)});   // soft fold creases
+  g.fillStyle='rgba(255,240,220,.9)';g.font=`600 24px ${F}`;g.textAlign='center';g.fillText('2 0 2 7',w*.535,h*.9);
+  printTex.needsUpdate=true}
+drawPrint();
+const img=new Image();img.onload=()=>{drawPrint(img);document.getElementById('load').remove()};
+img.onerror=()=>document.getElementById('load').textContent='请用本地服务器打开（贴图需同目录）';
+img.src='cover-lineart.png';
+
+// translucent plastic throws a soft amber-tinted shadow, not a black one
+const shCv=document.createElement('canvas');shCv.width=shCv.height=256;{const g=shCv.getContext('2d');g.filter='blur(9px)';g.fillStyle='rgba(170,100,30,.34)';g.beginPath();g.roundRect(34,34,188,188,14);g.fill()}
+const shTex=tex(shCv);
+const mkShadow=()=>{const m=new THREE.Mesh(new THREE.PlaneGeometry((CVW-0.5)*256/188,(CVH-0.5)*256/188),new THREE.MeshBasicMaterial({map:shTex,transparent:true,depthWrite:false}));m.position.z=-0.655;book.add(m);return m};
+const shBack=mkShadow();shBack.position.x=SPINE+CVW/2+0.5;shBack.position.y=-0.5;
+const shCover=mkShadow();shCover.position.y=-0.5;
+// elastic cord: one round loop hugging the closed book
+const bx0=SPINE-SPR-0.07,bx1=SPINE+CVW+0.06,bz0=-0.6,bz1=COVZ+0.27;
+const band=new THREE.Mesh(loop(rrPts((bx1-bx0)/2,(bz1-bz0)/2,.3,8).map(([a,b])=>new THREE.Vector3(a+(bx0+bx1)/2,0,b+(bz0+bz1)/2)),0.075,200),
+  new THREE.MeshStandardMaterial({color:'#efe6d6',roughness:.9}));
+band.position.y=-1.9;band.castShadow=true;book.add(band);
+
+/* ---------- acrylic charm (hangs from cover, outside) ---------- */
+const charm=new THREE.Group();charm.position.set(-CVW/2+0.35,CVH/2-1.2,CVT/2+0.35);cover.add(charm);
+const swing=new THREE.Group();charm.add(swing);
+const brass=new THREE.MeshPhysicalMaterial({color:'#7a5038',metalness:1,roughness:.3,clearcoat:.5});
+const clasp=new THREE.Mesh(new THREE.TorusGeometry(0.32,0.07,16,40),brass);clasp.scale.y=1.7;clasp.position.y=-0.55;swing.add(clasp);
+const r1=new THREE.Mesh(new THREE.TorusGeometry(0.22,0.05,12,32),brass);r1.position.y=-1.25;r1.rotation.y=Math.PI/2;swing.add(r1);
+const r2=new THREE.Mesh(new THREE.TorusGeometry(0.26,0.05,12,32),brass);r2.position.y=-1.7;swing.add(r2);
+const bellPiv=new THREE.Group();bellPiv.position.set(-0.1,-1.8,0);swing.add(bellPiv);
+const stem=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.6),brass);stem.position.set(-.18,-.28,0);stem.rotation.z=-.6;bellPiv.add(stem);
+const bell=new THREE.Mesh(new THREE.SphereGeometry(0.42,32,24),new THREE.MeshPhysicalMaterial({color:'#8a5a3a',metalness:1,roughness:.22,clearcoat:.8}));
+bell.position.set(-.48,-.85,0);bellPiv.add(bell);
+const slot=new THREE.Mesh(new THREE.BoxGeometry(.7,.06,.2),new THREE.MeshStandardMaterial({color:'#1e0f06'}));slot.position.set(-.48,-1.0,.33);slot.rotation.x=-.4;bellPiv.add(slot);
+// mouse silhouette
+const ms=new THREE.Shape();
+const P=(x,y)=>[x*.03,-y*.03];
+ms.moveTo(...P(30,32));
+ms.bezierCurveTo(...P(8,32),...P(2,4),...P(24,2));ms.bezierCurveTo(...P(42,0),...P(48,16),...P(46,24));
+ms.bezierCurveTo(...P(52,22),...P(56,22),...P(60,24));ms.bezierCurveTo(...P(60,6),...P(84,0),...P(92,14));
+ms.bezierCurveTo(...P(98,28),...P(88,38),...P(78,40));ms.bezierCurveTo(...P(92,58),...P(90,80),...P(76,92));
+ms.bezierCurveTo(...P(86,94),...P(100,90),...P(98,76));ms.bezierCurveTo(...P(108,92),...P(92,108),...P(70,102));
+ms.bezierCurveTo(...P(52,108),...P(32,106),...P(24,92));ms.bezierCurveTo(...P(10,76),...P(14,50),...P(30,32));
+const mGeo=new THREE.ExtrudeGeometry(ms,{depth:0.22,bevelEnabled:true,bevelThickness:.06,bevelSize:.06,bevelSegments:6,curveSegments:40});
+mGeo.translate(-1.6,0,-0.11);
+const clear=new THREE.MeshPhysicalMaterial({color:'#f7e9dc',transparent:true,opacity:.84,roughness:.08,clearcoat:1,clearcoatRoughness:.03,envMapIntensity:1.3});
+const mouse=new THREE.Mesh(mGeo,clear);mouse.position.y=-1.85;mouse.castShadow=true;swing.add(mouse);
+// line art on the acrylic (UV printed layer)
+const mc=document.createElement('canvas');mc.width=mc.height=512;{const g=mc.getContext('2d'),s=512/110;g.scale(s,s);
+ g.strokeStyle='#7a4a2a';g.lineWidth=1.6;g.lineCap='round';g.lineJoin='round';
+ g.beginPath();g.arc(24,18,12,0,7);g.moveTo(88,20);g.arc(76,20,12,0,7);g.stroke();
+ g.beginPath();g.moveTo(34,48);g.quadraticCurveTo(50,72,70,52);g.stroke();
+ g.fillStyle='#7a4a2a';g.beginPath();g.arc(42,46,1.8,0,7);g.arc(60,45,1.8,0,7);g.fill();g.beginPath();g.arc(51,56,2.4,0,7);g.fill();
+ g.beginPath();[[38,56,22,54],[38,59,24,64],[64,55,80,52],[64,58,78,64]].forEach(([a,b,c,d])=>{g.moveTo(a,b);g.lineTo(c,d)});g.stroke();
+ g.beginPath();g.moveTo(42,74);g.lineTo(42,96);g.lineTo(62,96);g.lineTo(62,76);g.moveTo(66,94);g.quadraticCurveTo(82,98,82,86);g.stroke();
+ g.font='italic 9px "Bradley Hand",cursive';g.fillText('2027',40,106)}
+const mArt=new THREE.Mesh(new THREE.PlaneGeometry(3.3,3.3),new THREE.MeshStandardMaterial({map:tex(mc),transparent:true,depthWrite:false,roughness:.5}));
+mArt.position.set(-1.6+1.65,-1.85-1.65,0.18);swing.add(mArt);
+
+/* ---------- interaction & animation ---------- */
+const state={open:0,unf:0},cur={c:0,f:0,p2:0,p3:0};
+const b1=document.getElementById('b1');
+function setOpen(o){if(o){setUnf(1);return}state.open=0;state.unf=0;sync()}
+function setUnf(u){const was=state.open;state.unf=u;if(u)state.open=1;sync();setTimeout(()=>sfx('flip',.45),was?800:1700);setTimeout(()=>sfx('flip',.4),was?1600:2500)}
+function sync(){sfx('flip',.5);b1.textContent=state.open?'合上':'打开封面';om+=state.open?1.5:-1.5}
+b1.onclick=()=>setOpen(state.open?0:1);
+// ---- page flip: drag the month page left/right (or ‹ ›). A bent sheet carries the old page over the rings.
+const FSEG=36,flipGeo=new THREE.PlaneGeometry(W,H,FSEG,1);flipGeo.translate(W/2,0,0);
+const flipCv=document.createElement('canvas');flipCv.width=CW;flipCv.height=CH;const flipTex=tex(flipCv);
+const FA=Math.PI*.985,LX=-0.69,LZ0=-0.36,lsT=m=>0.03+0.022*m;
+const cvBk=mkCanvas();{const g=cvBk.getContext('2d');paperBase(g);g.fillStyle='#f8e3e6';g.fillRect(120,80,CW-190,84);      // the weekly page printed on the back of each month sheet
+ g.strokeStyle='#ece7df';g.lineWidth=2;for(let y=164;y<CH-90;y+=46){g.beginPath();g.moveTo(120,y);g.lineTo(CW-70,y);g.stroke()}
+ g.strokeStyle='#d9d3ca';for(let k=1;k<3;k++){const x=120+k*(CW-190)/3;g.beginPath();g.moveTo(x,80);g.lineTo(x,CH-90);g.stroke()}
+ g.strokeStyle='#333';g.lineWidth=3;g.strokeRect(120,80,CW-190,CH-170);g.fillStyle='#b9a9a0';g.font=`500 22px ${F}`;g.fillText('WEEKLY',124,62);holes(g)}
+const tBk=tex(cvBk),tBkL=tex(cvBk);tBkL.wrapS=THREE.RepeatWrapping;tBkL.repeat.x=-1;tBkL.offset.x=1;
+const pgM=(map,side)=>new THREE.MeshStandardMaterial({map,roughness:.95,envMapIntensity:.6,side});
+const flipMesh=new THREE.Mesh(flipGeo,pgM(flipTex,THREE.FrontSide));flipMesh.add(new THREE.Mesh(flipGeo,pgM(tBk,THREE.BackSide)));
+flipMesh.visible=false;flipMesh.castShadow=true;book.add(flipMesh);
+// pile of already-turned pages resting on the open front cover
+const leftStack=new THREE.Group();leftStack.visible=false;book.add(leftStack);
+const lsBox=new THREE.Mesh(new THREE.BoxGeometry(W,H,1),[edgeM(true),edgeM(true),edgeM(false),edgeM(false),plainM,plainM]);lsBox.position.x=LX-W/2;lsBox.castShadow=lsBox.receiveShadow=true;
+const lsTop=new THREE.Mesh(new THREE.PlaneGeometry(W,H),pgM(tBkL,THREE.FrontSide));lsTop.position.x=LX-W/2;lsTop.receiveShadow=true;leftStack.add(lsBox,lsTop);
+function updLeft(){const m=flip&&flip.to>flip.from?month-1:month,t=lsT(m);leftStack.visible=!!state.open&&cur.c>.97&&m>0;
+  lsBox.scale.z=t;lsBox.position.z=LZ0+t/2;lsTop.position.z=LZ0+t+0.004}
+const flipBase=flipGeo.attributes.position.array.slice();let flip=null;
+function bendFlip(a,curl){const p=flipGeo.attributes.position,pr=a/FA;for(let i=0;i<p.count;i++){const u=flipBase[i*3];
+  const ang=a+curl*(u/W)*(u/W);p.setX(i,u*Math.cos(ang));p.setZ(i,u*Math.sin(ang)+Math.abs(Math.sin(Math.PI*u/W)*curl)*.35)}p.needsUpdate=true;flipGeo.computeVertexNormals();
+  flipMesh.position.set(LX*pr,0,0.07+(LZ0+lsT(month)+0.02-0.07)*pr+Math.sin(pr*Math.PI)*0.8)}   // the punched edge rides over the ring
+function flipMonth(d){if(flip||!state.open||cur.c<.95)return;const nm=month+d;if(nm<0||nm>11)return;
+  const g=flipCv.getContext('2d'),src=()=>cur.p2>.5?cvIntro:cvBack;
+  if(d>0){g.drawImage(src(),0,0);month=nm;drawAll();flip={from:0,to:FA,t:0}}
+  else{month=nm;drawAll();g.drawImage(src(),0,0);flip={from:FA,to:0,t:0}}
+  flipTex.needsUpdate=true;flipMesh.visible=true;bendFlip(flip.from,0);sfx('flip',.55)}
+function stepFlip(dt){if(!flip)return;flip.t=Math.min(1,flip.t+dt/0.8);const e=flip.t<.5?2*flip.t*flip.t:1-Math.pow(-2*flip.t+2,2)/2;
+  bendFlip(flip.from+(flip.to-flip.from)*e,Math.sin(Math.PI*flip.t)*(flip.to>flip.from?-.9:.9));if(flip.t>=1){flipMesh.visible=false;flip=null;pat()}}
+document.getElementById('tg').onclick=e=>{const h=stackEl.style.display!=='none';stackEl.style.display=h?'none':'';e.target.textContent=h?'展开贴纸栏':'收起贴纸栏'};
+// ---- backup / restore: everything you wrote and stuck lives in this browser; export it to a file you keep
+const toastEl=document.getElementById('toast');
+function toast(msg,showBtn,ms){toastEl.querySelector('span').textContent=msg;document.getElementById('tbk').hidden=!showBtn;toastEl.hidden=false;clearTimeout(toast.t);if(ms)toast.t=setTimeout(()=>toastEl.hidden=true,ms)}
+function exportBackup(){const d=new Date(),pad=n=>String(n).padStart(2,'0'),day=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const data={app:'animals-planner-2027',version:1,exportedAt:d.toISOString(),notes:NOTES,stickers:STK.map(({t,...r})=>r)};
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:'application/json'}));a.download=`手帐备份-${day}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  try{localStorage.setItem('pn27-lastbackup',String(Date.now()))}catch(e){}
+  toast(`已备份：${Object.keys(NOTES).length} 条计划，${STK.length} 张贴纸`,false,3500)}
+function importBackup(file){const fr=new FileReader();fr.onload=()=>{try{const d=JSON.parse(fr.result);
+    if(d.app!=='animals-planner-2027'||typeof d.notes!=='object'||!Array.isArray(d.stickers))throw 0;
+    const n=Object.keys(d.notes).length,cur=Object.keys(NOTES).length+STK.length;
+    if(cur&&!confirm(`恢复会用备份（${n} 条计划，${d.stickers.length} 张贴纸）替换当前内容（${Object.keys(NOTES).length} 条计划，${STK.length} 张贴纸）。确定吗？`))return;
+    Object.keys(NOTES).forEach(k=>delete NOTES[k]);Object.assign(NOTES,d.notes);
+    STK.length=0;d.stickers.forEach(p=>{if(Number.isFinite(p.i)&&Number.isFinite(p.x)&&Number.isFinite(p.y))STK.push(p)});
+    save();try{localStorage.setItem('pn27-lastbackup',String(Date.now()))}catch(e){}drawAll();toast(`已恢复：${n} 条计划，${STK.length} 张贴纸`,false,3500)}catch(e){toast('这个文件不是手帐备份，没有恢复',false,3500)}};fr.readAsText(file)}
+document.getElementById('bk').onclick=exportBackup;document.getElementById('tbk').onclick=exportBackup;
+document.getElementById('tx').onclick=()=>toastEl.hidden=true;
+const rsf=document.getElementById('rsf');document.getElementById('rs').onclick=()=>rsf.click();
+rsf.onchange=()=>{if(rsf.files[0])importBackup(rsf.files[0]);rsf.value=''};
+setTimeout(()=>{let last=0;try{last=+localStorage.getItem('pn27-lastbackup')||0}catch(e){}
+  const has=Object.keys(NOTES).length+STK.length;if(!has)return;const days=Math.floor((Date.now()-last)/864e5);
+  if(!last)toast(`你已经写了 ${Object.keys(NOTES).length} 条计划，还没备份过`,true);else if(days>=7)toast(`已经 ${days} 天没备份了`,true)},2500);
+document.getElementById('prev').onclick=()=>flipMonth(-1);
+document.getElementById('next').onclick=()=>flipMonth(1);
+let pageDrag=null;
+renderer.domElement.addEventListener('pointerdown',e=>{if(e.button!==0||!state.open||cur.c<.95||editing||flip||stickerAt(e)!=null)return;
+  ptr.set(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1);ray.setFromCamera(ptr,camera);
+  if(ray.intersectObjects([s1.front,s2.back,lsTop],false).length){pageDrag={x:e.clientX};controls.enabled=false}});
+addEventListener('pointermove',e=>{if(pageDrag&&Math.abs(e.clientX-pageDrag.x)>50){flipMonth(e.clientX<pageDrag.x?1:-1);pageDrag=null;downXY=null;controls.enabled=true}});
+addEventListener('pointerup',()=>{if(pageDrag){pageDrag=null;controls.enabled=true}});
+const ray=new THREE.Raycaster(),ptr=new THREE.Vector2();let downXY=null;
+renderer.domElement.addEventListener('pointerdown',e=>{downXY=[e.clientX,e.clientY];
+  if(state.open)return;ptr.set(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1);ray.setFromCamera(ptr,camera);
+  if(ray.intersectObjects([coverMesh,print,mouse,bell],false).length){shake={x0:e.clientX,y0:e.clientY};controls.enabled=false}});
+let shake=null;const shT=new THREE.Vector2(),shV=new THREE.Vector2();
+addEventListener('pointermove',e=>{if(shake)shT.set((e.clientX-shake.x0)*.035,-(e.clientY-shake.y0)*.035)});
+addEventListener('pointerup',()=>{if(shake){shake=null;shT.set(0,0);controls.enabled=true}});
+renderer.domElement.addEventListener('pointerup',e=>{if(!downXY||Math.hypot(e.clientX-downXY[0],e.clientY-downXY[1])>5)return;
+  ptr.set(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1);ray.setFromCamera(ptr,camera);
+  const hit=ray.intersectObjects([mouse,bell,clasp,coverMesh,print,s2.back,s2.front,s3.front,s1.front],false)[0];if(!hit){focusMode=false;return}
+  const o=hit.object;
+  if(o===mouse||o===bell||o===clasp){om+=3*(Math.random()<.5?-1:1);bom+=9;ding(.45)}
+  else if(o===coverMesh||o===print){if(!state.open)setOpen(1)}
+  else if(o===s2.back){setUnf(1)}
+  else if(o===s3.front&&hit.uv.x>(CW-70)/CW){month=Math.min(11,Math.floor((1-hit.uv.y)*12));drawAll()}
+  else if(o===s2.front||o===s3.front){const c=o===s2.front?cvL:cvR,px=hit.uv.x*CW,py=(1-hit.uv.y)*CH;
+    const cell=CELLS.find(k=>k.c===c&&px>=k.x&&px<k.x+k.w&&py>=k.y&&py<k.y+k.h);if(cell)editCell(cell,o)}});
+// ---- write directly on the page: a transparent textarea projected exactly over the cell
+const ink=document.getElementById('ink');let editing=null,focusMode=false,userZoom=1;
+function cellWorld(cell,mesh,fx,fy){return mesh.localToWorld(new THREE.Vector3(((cell.x+cell.w*fx)/CW-.5)*W,(.5-(cell.y+cell.h*fy)/CH)*H,0.01))}
+function toScreen(v){v=v.clone().project(camera);return [(v.x+1)/2*innerWidth,(1-v.y)/2*innerHeight]}
+function editCell(cell,mesh){if(editing)finishEdit();focusMode=true;const k=`${month+1}-${cell.d}`;
+  editing={cell,mesh,k};EDITK=k;drawAll();ink.value=NOTES[k]||'';ink.hidden=false;placeInk();setTimeout(()=>ink.focus(),30)}
+function finishEdit(cancel){if(!editing)return;const {k}=editing;
+  if(!cancel){const v=ink.value.trim();v?NOTES[k]=v:delete NOTES[k];save()}
+  editing=null;EDITK=null;ink.hidden=true;ink.blur();drawAll()}
+function placeInk(){if(!editing)return;const {cell,mesh}=editing;
+  const [x0,y0]=toScreen(cellWorld(cell,mesh,0,.3)),[x1,y1]=toScreen(cellWorld(cell,mesh,1,1));
+  const sc=(y1-y0)/(cell.h*.7);Object.assign(ink.style,{left:x0+'px',top:y0+'px',width:(x1-x0)+'px',height:(y1-y0)+'px',fontSize:(30*sc)+'px',lineHeight:(34*sc)+'px'})}
+ink.addEventListener('keydown',e=>{if(!editing)return;e.stopPropagation();if(e.key=='Enter'&&!e.shiftKey){e.preventDefault();finishEdit()}if(e.key=='Escape'){finishEdit(true)}});
+ink.addEventListener('blur',()=>finishEdit());
+ink.addEventListener('input',()=>{for(let k=0;k<3;k++)setTimeout(()=>sfx('pen',.25),k*70)});
+addEventListener('keydown',e=>{if(e.key=='Escape'&&!editing)focusMode=false});
+// wheel = how close the view is (persists; overrides the auto-fit only by a factor)
+controls.enableZoom=false;
+renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();userZoom=Math.min(2.2,Math.max(.3,userZoom*Math.exp(e.deltaY*.0012)))},{passive:false});
+/* ---------- sound: one synth used live AND for offline rendering (recording) ---------- */
+const SFX_LOG=[];
+function nbuf(ctx,dur,shape){const b=ctx.createBuffer(1,Math.max(1,Math.floor(ctx.sampleRate*dur)),ctx.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*shape(i/d.length);return b}
+function noiseAt(ctx,t,dur,type,f,q,v,shape=x=>Math.pow(1-x,2),out=ctx.destination,sweep){const s=ctx.createBufferSource(),fl=ctx.createBiquadFilter(),g=ctx.createGain();
+  s.buffer=nbuf(ctx,dur,shape);fl.type=type;fl.frequency.setValueAtTime(f,t);if(sweep)fl.frequency.exponentialRampToValueAtTime(sweep,t+dur);fl.Q.value=q;g.gain.value=v;
+  s.connect(fl).connect(g).connect(out);s.start(t)}
+// small brass jingle bell: inharmonic partials + a rattling metal ball inside
+function bellAt(ctx,t,v){const base=2350*(0.97+Math.random()*.06),out=ctx.createGain();out.gain.value=v;out.connect(ctx.destination);
+  [[1,1,.55],[2.42,.5,.32],[3.98,.3,.2],[5.6,.18,.12],[7.3,.1,.08]].forEach(([m,a,dec])=>{const o=ctx.createOscillator(),g=ctx.createGain();
+    o.type='sine';o.frequency.value=base*m;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(a,t+.002);g.gain.exponentialRampToValueAtTime(.0001,t+dec*2.2);
+    o.connect(g).connect(out);o.start(t);o.stop(t+dec*2.3)});
+  for(let k=0;k<3;k++)noiseAt(ctx,t+k*(.018+Math.random()*.02),.03,'bandpass',6200,2.5,.5/(k+1),x=>Math.pow(1-x,4),out)}
+const SYN={
+  bell:(c,t,v)=>bellAt(c,t,v),
+  // crisp vinyl peel: a fast zip of tiny adhesive "ticks" + a bright airy tear on top
+  rip:(c,t,v)=>{const n=16+Math.floor(Math.random()*8);let tt=t;for(let k=0;k<n;k++){tt+=.006+Math.random()*.012;
+      noiseAt(c,tt,.012,'bandpass',4200+Math.random()*3800,4,v*(.55+.45*Math.random())*(1-k/n*.5),x=>Math.pow(1-x,6))}
+    noiseAt(c,t,.2,'highpass',6500,.8,v*.35,x=>Math.sin(Math.PI*x)*(.7+.3*Math.random()));noiseAt(c,t,.05,'bandpass',2600,2,v*.25)},
+  tick:(c,t,v)=>noiseAt(c,t,.01,'bandpass',5000+Math.random()*3000,5,v,x=>Math.pow(1-x,6)),
+  pat:(c,t,v)=>{noiseAt(c,t,.07,'lowpass',900,.8,v);noiseAt(c,t,.03,'bandpass',2200,1,v*.3)},
+  flip:(c,t,v)=>noiseAt(c,t,.42,'bandpass',600,.7,v,x=>Math.sin(Math.PI*Math.min(1,x*1.4))*(1-x),c.destination,3200),
+  pen:(c,t,v)=>noiseAt(c,t,.05+Math.random()*.04,'bandpass',3600+Math.random()*1200,1.4,v,x=>Math.sin(Math.PI*x)),
+};
+let ac;function sfx(type,v=.4){SFX_LOG.push({type,v,t:performance.now()});
+  try{ac=ac||new AudioContext();if(ac.state==='suspended')ac.resume();SYN[type](ac,ac.currentTime+.005,v)}catch(e){}}
+const ding=(v=.35)=>sfx('bell',v),paperRip=(v=.5)=>sfx('rip',v),pat=()=>sfx('pat',.7);
+async function renderAudio(t0,dur){const sr=32000,c=new OfflineAudioContext(1,Math.ceil(sr*dur),sr);
+  SFX_LOG.forEach(e=>{const t=(e.t-t0)/1000;if(t>=0&&t<dur-1)SYN[e.type](c,t,e.v)});
+  const buf=await c.startRendering(),d=buf.getChannelData(0),n=d.length,ab=new ArrayBuffer(44+n*2),dv=new DataView(ab);
+  const w=(o,s)=>[...s].forEach((ch,i)=>dv.setUint8(o+i,ch.charCodeAt(0)));
+  w(0,'RIFF');dv.setUint32(4,36+n*2,true);w(8,'WAVEfmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);
+  dv.setUint32(24,sr,true);dv.setUint32(28,sr*2,true);dv.setUint16(32,2,true);dv.setUint16(34,16,true);w(36,'data');dv.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++)dv.setInt16(44+i*2,Math.max(-1,Math.min(1,d[i]*.9))*32767,true);
+  let s='';const u=new Uint8Array(ab);for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(s)}
+
+/* ---------- stickers ---------- */
+// 4 sheets × 9. Real art: stickers/s01.png … s36.png (transparent PNG); missing ones use drawn placeholders.
+const SHEETS=[{t:'上班日常 · WORK',c:'#e98a6b'},{t:'四季节日 · SEASONS',c:'#7aa77a'},{t:'心情吐槽 · MOOD',c:'#7c96c9'},{t:'吃吃喝喝 · FOOD',c:'#d9a441'}];
+const WORDS=['打卡','加班','开会','出差','DDL!','发工资','摸鱼','下班!','休假','元旦','春节','赏花','端午','七夕','中秋','国庆','初雪','圣诞',
+             '开心','好累','冲鸭','生日','约会','看牙医','打疫苗','登山日','搬家','咖啡','奶茶','火锅','蛋糕','烧烤','聚餐','西瓜','便当','早餐',
+             '晴','多云','阴天','小雨','大雨','雷阵雨','下雪','大风','热死了','emo','生气','爱了','无语','好困','开摆','惊！','嘿嘿','加油'];
+var ART=[];
+function dieCut(src){const S=256,pad=16,c=document.createElement('canvas');c.width=c.height=S;const g=c.getContext('2d');
+  const t=document.createElement('canvas');t.width=t.height=S;const tg=t.getContext('2d');
+  const sc=Math.min((S-pad*2)/src.width,(S-pad*2)/src.height),w=src.width*sc,h=src.height*sc;tg.drawImage(src,(S-w)/2,(S-h)/2,w,h);
+  const wh=document.createElement('canvas');wh.width=wh.height=S;const wg=wh.getContext('2d');wg.drawImage(t,0,0);wg.globalCompositeOperation='source-in';wg.fillStyle='#fff';wg.fillRect(0,0,S,S);
+  for(let a=0;a<24;a++)g.drawImage(wh,Math.cos(a/24*6.283)*9,Math.sin(a/24*6.283)*9);   // white kiss-cut border
+  g.drawImage(t,0,0);g.globalCompositeOperation='source-atop';const gr=g.createLinearGradient(0,0,S,S);
+  gr.addColorStop(.25,'#fff0');gr.addColorStop(.42,'#ffffff45');gr.addColorStop(.55,'#fff0');g.fillStyle=gr;g.fillRect(0,0,S,S);return c}
+function placeholder(i){const c=document.createElement('canvas');c.width=c.height=200;const g=c.getContext('2d'),col=(SHEETS[Math.floor(i/9)]||SHEETS[2]).c;
+  g.lineWidth=7;g.strokeStyle='#2b2018';g.lineJoin='round';const cat=i%3==0;
+  if(cat){g.fillStyle=['#f2b56b','#f4efe6','#a9a9ad'][(i%9)/3|0];g.beginPath();g.moveTo(40,70);g.lineTo(55,25);g.lineTo(85,55);g.lineTo(115,55);g.lineTo(145,25);g.lineTo(160,70);
+    g.quadraticCurveTo(175,150,100,160);g.quadraticCurveTo(25,150,40,70);g.fill();g.stroke();
+    g.fillStyle='#2b2018';g.beginPath();g.arc(78,98,6,0,7);g.arc(122,98,6,0,7);g.fill();g.beginPath();g.moveTo(92,118);g.quadraticCurveTo(100,126,108,118);g.stroke();
+    g.fillStyle='#f19a9a88';g.beginPath();g.arc(62,118,10,0,7);g.arc(138,118,10,0,7);g.fill()}
+  const y=cat?170:100,word=WORDS[i];g.font=`700 ${word.length>3?32:42}px "PingFang SC"`;const tw=g.measureText(word).width+40;
+  g.fillStyle=cat?'#fff':col;g.beginPath();g.roundRect(100-tw/2,y-32,tw,58,29);g.fill();g.stroke();
+  g.fillStyle=cat?'#2b2018':'#fff';g.textAlign='center';g.fillText(word,100,y+10);return c}
+const HOLO=new Set([5,13,14,17,21,30]);   // 发工资 七夕 中秋 圣诞 生日 蛋糕 → foil versions
+var BACK=[],HART=[];
+function backing(a){const c=document.createElement('canvas');c.width=a.width;c.height=a.height;const g=c.getContext('2d');   // white release-liner side of the sticker
+  g.drawImage(a,0,0);g.globalCompositeOperation='source-in';const gr=g.createLinearGradient(0,0,c.width,c.height);gr.addColorStop(0,'#fbf9f5');gr.addColorStop(1,'#e6e0d6');
+  g.fillStyle=gr;g.fillRect(0,0,c.width,c.height);return c}
+function foil(a){const c=document.createElement('canvas');c.width=a.width;c.height=a.height;const g=c.getContext('2d');g.drawImage(a,0,0);
+  g.globalCompositeOperation='overlay';g.globalAlpha=.32;const gr=g.createLinearGradient(0,0,c.width,c.height);
+  ['#ff9ad5','#9ad8ff','#a6ffb0','#fff19a','#ff9ad5'].forEach((col,k)=>gr.addColorStop(k/4,col));g.fillStyle=gr;g.fillRect(0,0,c.width,c.height);
+  g.globalCompositeOperation='source-atop';g.globalAlpha=.22;const sh=g.createLinearGradient(0,0,c.width,c.height);sh.addColorStop(.35,'#fff0');sh.addColorStop(.48,'#fff');sh.addColorStop(.6,'#fff0');g.fillStyle=sh;g.fillRect(0,0,c.width,c.height);
+  g.globalCompositeOperation='destination-in';g.globalAlpha=1;g.drawImage(a,0,0);return c}
+const stackEl=document.getElementById('stack');
+// --- three sticker strips around the book: top = 心情·节日, bottom = 事项·工作, right = 生活·吃喝
+const R=(a,b)=>Array.from({length:b-a+1},(_,k)=>a+k);
+const GROUPS=[{id:'stTop',t:'心情 · 天气',c:'#7c96c9',rows:2,ids:[...R(36,44),18,19,20,...R(45,53)]},
+  {id:'stBot',t:'事项 · 工作 · 节日',c:'#e98a6b',rows:2,ids:[...R(0,8),...R(21,26),...R(9,17)]},
+  {id:'stRight',t:'生活 · 吃喝',c:'#d9a441',ids:[27,28,29,30,31,32,33,34,35],v:true}];
+GROUPS.forEach(gp=>{const el=document.createElement('div');el.className='strip'+(gp.v?' v':'');el.id=gp.id;el.style.setProperty('--c',gp.c);
+  el.innerHTML=`<div class="lab">${gp.t}</div><div class="row"></div>`;if(gp.rows)el.style.setProperty('--cols',Math.ceil(gp.ids.length/gp.rows));stackEl.appendChild(el);
+  el.addEventListener('pointermove',e=>{const r=el.getBoundingClientRect();el.style.setProperty('--hx',((e.clientX-r.left)/r.width*100).toFixed(1)+'%');el.style.setProperty('--hy',((e.clientY-r.top)/r.height*100).toFixed(1)+'%')});
+  gp.ids.forEach(i=>{const wr=document.createElement('span'),im=document.createElement('img');wr.className='stkw'+(HOLO.has(i)?' holo':'');
+    im.className='stk';im.dataset.i=i;im.draggable=false;wr.appendChild(im);el.querySelector('.row').appendChild(wr);
+    const setArt=src=>{ART[i]=dieCut(src);BACK[i]=backing(ART[i]);if(HOLO.has(i))HART[i]=foil(ART[i]);
+      const url=ART[i].toDataURL();im.src=url;wr.style.setProperty('--m',`url(${url})`);if(STK.some(p=>p.i==i&&p.m==month))drawAll()};
+    const real=new Image();real.onload=()=>setArt(real);real.onerror=()=>setArt(placeholder(i));real.src=`stickers/s${String(i+1).padStart(2,'0')}.png`})});
+// ---- liquid folder with the 36 ins stickers (indices 54–89 in the shared sticker system)
+const INS0=54,INSN=36;
+function fitArt(img){const S=256,pad=10,c=document.createElement('canvas');c.width=c.height=S;const g=c.getContext('2d'),sc=Math.min((S-pad*2)/img.width,(S-pad*2)/img.height);
+  g.drawImage(img,(S-img.width*sc)/2,(S-img.height*sc)/2,img.width*sc,img.height*sc);return c}   // ins stickers already carry their own white die-cut edge
+// ---- 「他」Q版贴纸（仅私人使用；沿用同一套拖贴/保存，不用 dieCut，因为原图已有白边）
+const TA0=90;
+const taEl=document.createElement('div');taEl.className='strip';taEl.id='stTa';taEl.style.setProperty('--c','#7a5c8a');taEl.style.setProperty('--cols',4);
+taEl.innerHTML='<div class="lab">他</div><div class="row"></div>';stackEl.insertBefore(taEl,stackEl.firstChild);
+for(let k=0;k<8;k++){const i=TA0+k,wr=document.createElement('span'),im=document.createElement('img');wr.className='stkw';im.className='stk';im.dataset.i=i;im.draggable=false;wr.appendChild(im);taEl.querySelector('.row').appendChild(wr);
+  const setArt=src=>{ART[i]=fitArt(src);BACK[i]=backing(ART[i]);const url=ART[i].toDataURL();im.src=url;wr.style.setProperty('--m',`url(${url})`);if(STK.some(p=>p.i==i&&p.m==month))drawAll()};
+  const real=new Image();real.onload=()=>setArt(real);real.src=`stickers-ta/q${k+1}.png`}
+const folder=document.createElement('div');folder.className='folder';
+folder.innerHTML='<div class="gl back"></div><div class="gl tab">ins 贴纸</div><div class="peek"></div><div class="pop"><span class="stkw"><img class="stk" draggable="false"></span></div><div class="gl front"><span>STICKERS</span><b>36</b></div>';
+stackEl.appendChild(folder);
+const popW=folder.querySelector('.pop .stkw'),popI=popW.querySelector('img'),peek=folder.querySelector('.peek');let insK=0;
+for(let k=0;k<INSN;k++){const i=INS0+k,im=new Image();im.onload=()=>{ART[i]=fitArt(im);BACK[i]=backing(ART[i]);
+    if(k<5){const t=document.createElement('img');t.src=ART[i].toDataURL();Object.assign(t.style,{left:(k*40-4)+'px',top:(k%2?14:2)+'px',transform:`rotate(${[-14,9,-5,12,-9][k]}deg)`});peek.appendChild(t)}
+    if(k===0)setPop(0)};im.src=`stickers-ins/ins${String(k+1).padStart(2,'0')}.png`}
+function setPop(k){insK=(k+INSN)%INSN;const i=INS0+insK;if(!ART[i])return;const url=ART[i].toDataURL();popI.src=url;popI.dataset.i=i;popW.style.setProperty('--m',`url(${url})`);
+  folder.querySelector('.pop').style.setProperty('--r',(Math.random()*16-8).toFixed(1)+'deg')}
+let popT=null;
+folder.addEventListener('pointerenter',()=>{clearTimeout(popT);if(!folder.classList.contains('open')){setPop(insK+1);folder.classList.add('open');sfx('pat',.35)}});
+folder.addEventListener('pointerleave',()=>{popT=setTimeout(()=>{if(!peel&&!dragEl)folder.classList.remove('open')},350)});
+folder.addEventListener('pointermove',e=>{const r=folder.getBoundingClientRect();folder.style.setProperty('--mx',((e.clientX-r.left)/r.width*100).toFixed(0)+'%');folder.style.setProperty('--my',((e.clientY-r.top)/r.height*100).toFixed(0)+'%')});
+folder.querySelector('.front').style.pointerEvents='none';
+folder.addEventListener('click',e=>{if(!e.target.closest('.pop')){folder.classList.remove('open');setTimeout(()=>{setPop(insK+1);folder.classList.add('open')},160)}});   // tap the folder → another one pops out
+// ---- apple-peel washi tape: pull the tail off the roll, it tears at a fixed length, each piece becomes a sticker (indices 1000+k)
+const TAPE0=1000,PIECE=226,TH=52;   // piece size in sticker-canvas px (≈ one date cell wide)
+let tapeTex=null,tapeK=load('pn27-tape',0);
+const tapeEl=document.createElement('div');tapeEl.className='tape';tapeEl.innerHTML='<img src="tape/apple-roll.webp" draggable="false"><span>拉我撕一段</span>';stackEl.appendChild(tapeEl);
+const rollImg=tapeEl.querySelector('img');
+{const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=600;const g=c.getContext('2d');g.drawImage(im,0,0,600,600);
+  const d=g.getImageData(0,0,600,600),p=d.data;for(let j=0;j<p.length;j+=4){const m=Math.min(p[j],p[j+1],p[j+2]),sp=Math.max(p[j],p[j+1],p[j+2])-m;   // knock out the white studio background, keep the warm core
+    if(sp<14&&m>232)p[j+3]=Math.max(0,(255-m)*12)}g.putImageData(d,0,0);rollImg.src=c.toDataURL()};im.src='tape/apple-roll.webp'}
+const pullCv=document.createElement('canvas');pullCv.id='pull';document.body.appendChild(pullCv);
+function rng(s){return()=>{s=(s*16807+11)%2147483647;return s/2147483647}}
+function tearEdge(k){const r=rng(k*7919+13),pts=[];for(let y=0;y<=TH;y+=3+r()*4)pts.push([(r()-.5)*7,Math.min(y,TH)]);pts.push([(r()-.5)*7,TH]);return pts}   // shared by piece k-1 (right end) and piece k (left end)
+function texAt(g,off,x,w,h){const tw=tapeTex.width,sc=h/tapeTex.height;let sx=(off/sc)%tw,dx=x,rem=w;   // tile the strip texture
+  while(rem>0){const cw=Math.min(rem,(tw-sx)*sc);g.drawImage(tapeTex,sx,0,cw/sc,tapeTex.height,dx,0,cw,h);dx+=cw;rem-=cw;sx=0}}
+function tapePiece(k){const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d'),x0=(256-PIECE)/2,y0=(256-TH)/2;
+  const L=tearEdge(k),Rr=tearEdge(k+1);g.translate(x0,y0);g.beginPath();L.forEach(([x,y],j)=>j?g.lineTo(x,y):g.moveTo(x,y));
+  for(let j=Rr.length-1;j>=0;j--)g.lineTo(PIECE+Rr[j][0],Rr[j][1]);g.closePath();g.clip();texAt(g,k*PIECE,-6,PIECE+12,TH);return c}
+function tapeArt(i){if(ART[i]||!tapeTex||i<TAPE0)return;ART[i]=tapePiece(i-TAPE0);BACK[i]=backing(ART[i])}
+const tx=new Image();tx.onload=()=>{const sy=Math.round(tx.height*.345),sh=Math.round(tx.height*.3),c=document.createElement('canvas');c.width=tx.width;c.height=sh;
+  const g=c.getContext('2d');g.drawImage(tx,0,sy,tx.width,sh,0,0,tx.width,sh);const d=g.getImageData(0,0,c.width,sh),p=d.data;
+  for(let j=0;j<p.length;j+=4){const m=Math.min(p[j],p[j+1],p[j+2]);p[j+3]=m>238?0:m>215?(238-m)/23*255:255}g.putImageData(d,0,0);   // white → transparent
+  tapeTex=c;STK.forEach(p=>tapeArt(p.i));drawAll()};tx.src='tape/apple-strip.webp';
+let pull=null;
+tapeEl.addEventListener('pointerdown',e=>{if(!tapeTex||e.button!==0)return;e.preventDefault();e.stopPropagation();downXY=null;controls.enabled=false;
+  const r=rollImg.getBoundingClientRect();pull={ax:r.left+r.width*.5,ay:r.top+r.height*.93,w:r.width*.16,dist:0,lastT:0};drawPull(e.clientX,e.clientY);sfx('tick',.2)});
+function drawPull(px,py){const dpr=devicePixelRatio||1;pullCv.width=innerWidth*dpr;pullCv.height=innerHeight*dpr;const g=pullCv.getContext('2d');g.scale(dpr,dpr);
+  const {ax,ay,w}=pull,dx=px-ax,dy=py-ay,len=Math.hypot(dx,dy);if(len<2)return 0;
+  const cx=ax+dx*.5,cy=ay+dy*.5+Math.min(60,len*.25),N=Math.max(4,len/6|0),sc=w/TH;   // sagging curve from roll to pointer
+  let prev=[ax,ay],acc=0;g.shadowColor='rgba(60,30,20,.25)';g.shadowBlur=8;g.shadowOffsetY=6;
+  for(let s=1;s<=N;s++){const t=s/N,x=(1-t)*(1-t)*ax+2*t*(1-t)*cx+t*t*px,y=(1-t)*(1-t)*ay+2*t*(1-t)*cy+t*t*py,sl=Math.hypot(x-prev[0],y-prev[1]);
+    g.save();g.translate(prev[0],prev[1]);g.rotate(Math.atan2(y-prev[1],x-prev[0]));g.scale(sc,sc);g.translate(0,-TH/2);
+    const seg=sl/sc+.8;g.beginPath();g.rect(0,0,seg,TH);g.clip();texAt(g,tapeK*PIECE+acc/sc,0,seg,TH);g.restore();acc+=sl;prev=[x,y]}
+  rollImg.style.transform=`rotate(${-acc*.6}deg)`;return acc}
+addEventListener('pointermove',e=>{if(!pull)return;const acc=drawPull(e.clientX,e.clientY),now=performance.now();
+  if(now-pull.lastT>30+Math.random()*25){pull.lastT=now;sfx('tick',.1+Math.random()*.1)}
+  if(acc>PIECE*(pull.w/TH)){const k=tapeK++,i=TAPE0+k;try{localStorage.setItem('pn27-tape',tapeK)}catch(_){}tapeArt(i);   // fixed length reached → tear
+    pullCv.getContext('2d').clearRect(0,0,pullCv.width,pullCv.height);pull=null;rollImg.style.transition='transform .4s';rollImg.style.transform='';setTimeout(()=>rollImg.style.transition='',400);
+    dragI=i;dragEl=document.createElement('img');dragEl.id='drag';dragEl.src=ART[i].toDataURL();sizeDrag(1.9);dragEl.dataset.s=1.9;document.body.appendChild(dragEl);moveDrag(e);paperRip(.75)}});
+addEventListener('pointerup',()=>{if(!pull)return;pull=null;controls.enabled=true;pullCv.getContext('2d').clearRect(0,0,pullCv.width,pullCv.height);rollImg.style.transform='';sfx('pat',.3)});   // let go early → it rolls back
+function markUsed(){}   // stickers are reusable: a fresh copy refills the slot after each peel
+let dragEl=null,dragI=-1;
+// Peel: the sticker lifts from the nearest corner along a fold line; the flap shows the white liner side and casts a shadow.
+// Once pulled far enough it comes free and follows the pointer. (approach inspired by peel.js / stickerjs)
+let peel=null;
+// on-screen size of a sticker drawn on the page, so what you drag is exactly what lands
+function sizeDrag(s){const a=toScreen(s2.front.localToWorld(new THREE.Vector3(0,H/2,0))),b=toScreen(s2.front.localToWorld(new THREE.Vector3(0,-H/2,0)));
+  const px=Math.abs(b[1]-a[1])/CH*170*s;if(state.open&&px>20){dragEl.style.width=dragEl.style.height=px+'px'}}
+// pick a placed sticker under the pointer (topmost first)
+function stickerAt(e){ptr.set(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1);ray.setFromCamera(ptr,camera);
+  const hit=ray.intersectObjects([s1.front,s2.front,s3.front],false)[0];if(!hit)return null;
+  const cv=hit.object===s1.front?'I':hit.object===s2.front?'L':'R',x=hit.uv.x*CW,y=(1-hit.uv.y)*CH;
+  for(let k=STK.length-1;k>=0;k--){const p=STK[k];if(p.m==month&&p.cv==cv&&Math.hypot(p.x-x,p.y-y)<78*p.s)return k}return null}
+// placed stickers can be peeled up again and moved anywhere
+renderer.domElement.addEventListener('pointerdown',e=>{if(e.button!==0||!state.open||editing)return;const k=stickerAt(e);if(k==null)return;
+  downXY=null;controls.enabled=false;const p=STK.splice(k,1)[0];save();drawAll();dragI=p.i;
+  dragEl=document.createElement('img');dragEl.id='drag';dragEl.src=(HART[p.i]||ART[p.i]).toDataURL();sizeDrag(p.s);dragEl.dataset.s=p.s;
+  document.body.appendChild(dragEl);moveDrag(e);paperRip(.55)});
+renderer.domElement.addEventListener('pointermove',e=>{if(dragEl||peel||!state.open)return;renderer.domElement.style.cursor=stickerAt(e)!=null?'grab':''});
+stackEl.addEventListener('pointerdown',e=>{downXY=null;const im=e.target.closest('.stk');if(!im||im.parentNode.classList.contains('used')||!ART[+im.dataset.i])return;
+  e.preventDefault();e.stopPropagation();const r=im.getBoundingClientRect(),S=r.width,lx=e.clientX-r.left,ly=e.clientY-r.top,k=S*.2;
+  const G={x:lx<S/2?k:S-k,y:ly<S/2?k:S-k},cv=document.createElement('canvas'),dpr=devicePixelRatio||1;
+  cv.id='peel';cv.width=S*3*dpr;cv.height=S*3*dpr;Object.assign(cv.style,{left:r.left-S+'px',top:r.top-S+'px',width:S*3+'px',height:S*3+'px'});document.body.appendChild(cv);
+  peel={i:+im.dataset.i,im,S,G,dx:e.clientX,dy:e.clientY,cv,dpr};im.style.visibility='hidden';drawPeel(e.clientX,e.clientY);paperRip(.18)});
+function drawPeel(cx,cy){const {S,G,cv,dpr,i}=peel,g=cv.getContext('2d');
+  const toC={x:S/2-G.x,y:S/2-G.y},tl=Math.hypot(toC.x,toC.y)||1,P={x:G.x+(cx-peel.dx)+toC.x/tl*S*.14,y:G.y+(cy-peel.dy)+toC.y/tl*S*.14};
+  const dl=Math.hypot(P.x-G.x,P.y-G.y)||1e-3,n={x:(P.x-G.x)/dl,y:(P.y-G.y)/dl},M={x:(G.x+P.x)/2,y:(G.y+P.y)/2},t={x:-n.y,y:n.x},L=S*4,d0=M.x*n.x+M.y*n.y;
+  const half=sgn=>{g.beginPath();g.moveTo(M.x+t.x*L,M.y+t.y*L);g.lineTo(M.x+t.x*L+sgn*n.x*L,M.y+t.y*L+sgn*n.y*L);g.lineTo(M.x-t.x*L+sgn*n.x*L,M.y-t.y*L+sgn*n.y*L);g.lineTo(M.x-t.x*L,M.y-t.y*L);g.closePath()};
+  g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,cv.width,cv.height);g.setTransform(dpr,0,0,dpr,S*dpr,S*dpr);
+  const art=HART[i]||ART[i];
+  g.save();half(1);g.clip();g.drawImage(art,0,0,S,S);                        // part still stuck down
+  const sh=g.createLinearGradient(M.x,M.y,M.x+n.x*dl*.6,M.y+n.y*dl*.6);sh.addColorStop(0,'rgba(70,45,20,.32)');sh.addColorStop(1,'rgba(70,45,20,0)');
+  g.globalCompositeOperation='source-atop';g.fillStyle=sh;g.fillRect(-S,-S,S*3,S*3);g.restore();   // flap shadow on the sticker
+  g.save();g.transform(1-2*n.x*n.x,-2*n.x*n.y,-2*n.x*n.y,1-2*n.y*n.y,2*d0*n.x,2*d0*n.y);half(-1);g.clip();   // mirror the lifted part over the fold
+  g.shadowColor='rgba(60,40,20,.35)';g.shadowBlur=10*dpr;g.shadowOffsetY=4*dpr;g.drawImage(BACK[i],0,0,S,S);g.shadowColor='transparent';
+  const cr=g.createLinearGradient(M.x,M.y,M.x-n.x*dl*.5,M.y-n.y*dl*.5);cr.addColorStop(0,'rgba(120,100,80,.28)');cr.addColorStop(.35,'rgba(255,255,255,.35)');cr.addColorStop(1,'rgba(150,130,110,.12)');
+  g.globalCompositeOperation='source-atop';g.fillStyle=cr;g.fillRect(-S,-S,S*3,S*3);g.restore();   // curl shading on the liner
+  return dl}
+let lastTick=0;addEventListener('pointermove',e=>{if(!peel)return;const dl=drawPeel(e.clientX,e.clientY);const now=performance.now();if(now-lastTick>28+Math.random()*30){lastTick=now;sfx('tick',.12+Math.min(.25,dl/peel.S*.25))}
+  if(dl>peel.S*1.05){const {i,im,cv}=peel;cv.remove();im.style.visibility='';peel=null;dragI=i;
+    dragEl=document.createElement('img');dragEl.id='drag';dragEl.src=(HART[i]||ART[i]).toDataURL();sizeDrag(.78);document.body.appendChild(dragEl);moveDrag(e);const wr=im.parentNode;wr.classList.add('used');if(wr===popW){folder.classList.remove('open');setTimeout(()=>{wr.classList.remove('used');setPop(insK+1);folder.classList.add('open')},650)}else setTimeout(()=>{wr.classList.remove('used');wr.classList.add('refill');setTimeout(()=>wr.classList.remove('refill'),500)},700);paperRip(.6)}});
+addEventListener('pointerup',()=>{if(!peel)return;peel.cv.remove();peel.im.style.visibility='';peel=null;pat()});   // let go early → it sticks back
+function moveDrag(e){if(dragEl){dragEl.style.left=e.clientX+'px';dragEl.style.top=e.clientY+'px'}}
+addEventListener('pointermove',moveDrag);
+addEventListener('pointerup',e=>{if(!dragEl)return;const el=dragEl;dragEl=null;controls.enabled=true;
+  ptr.set(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1);ray.setFromCamera(ptr,camera);
+  const hit=ray.intersectObjects([s1.front,s2.front,s3.front],false)[0];
+  if(hit){const cv=hit.object===s1.front?'I':hit.object===s2.front?'L':'R';
+    STK.push({i:dragI,m:month,cv,x:hit.uv.x*CW,y:(1-hit.uv.y)*CH,r:(Math.random()-.5)*.35,s:el.dataset.s?+el.dataset.s:.78,t:Date.now()});save();drawAll();pat()}
+  el.remove();markUsed()});
+renderer.domElement.addEventListener('contextmenu',e=>{e.preventDefault();ptr.set(e.clientX/innerWidth*2-1,-e.clientY/innerHeight*2+1);ray.setFromCamera(ptr,camera);
+  const hit=ray.intersectObjects([s1.front,s2.front,s3.front],false)[0];if(!hit)return;const cv=hit.object===s1.front?'I':hit.object===s2.front?'L':'R',x=hit.uv.x*CW,y=(1-hit.uv.y)*CH;
+  for(let k=STK.length-1;k>=0;k--){const p=STK[k];if(p.m==month&&p.cv==cv&&Math.hypot(p.x-x,p.y-y)<70*p.s){STK.splice(k,1);save();drawAll();markUsed();paperRip();break}}});
+function drawPlaced(){if(!ART)return;const map={I:cvIntro,L:cvL,R:cvR};
+  const now=Date.now();
+  STK.filter(p=>p.m==month&&ART[p.i]).forEach(p=>{const g=map[p.cv].getContext('2d'),a=HART[p.i]||ART[p.i];
+    // press & settle: lands a bit big and lifted, presses down past flat, then relaxes (shadow tightens as it sticks)
+    const age=p.t?(now-p.t)/1000:9;let k=1,lift=0;
+    if(age<.5){if(age<.11){const u=age/.11;k=1.3-.38*u;lift=1-u}else{const u=(age-.11)/.39;k=.92+.08*(1-Math.pow(1-u,3))+Math.sin(u*Math.PI*2)*.02*(1-u);lift=0}}
+    const sz=170*p.s*k;g.save();g.translate(p.x,p.y);g.rotate(p.r+(age<.5?Math.sin(age*30)*.03*(1-age*2):0));
+    if(p.i>=TAPE0&&age>=.5){g.globalCompositeOperation='multiply';g.globalAlpha=.92}else g.shadowColor=`rgba(60,40,20,${.28+.12*lift})`;g.shadowBlur=6+26*lift;g.shadowOffsetY=3+16*lift;g.drawImage(a,-sz/2,-sz/2,sz,sz);g.restore()})}
+setTimeout(markUsed,300);
+
+function placeStrips(){let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;const add=(m,x,y)=>{const [sx,sy]=toScreen(m.localToWorld(new THREE.Vector3(x,y,0)));x0=Math.min(x0,sx);x1=Math.max(x1,sx);y0=Math.min(y0,sy);y1=Math.max(y1,sy)};
+  [[-1,-1],[1,-1],[1,1],[-1,1]].forEach(([a,b])=>{add(coverMesh,a*CVW/2,b*CVH/2);add(flap.userData.pick[0],a*FW/2,b*CVH/2);add(s3.front,a*W/2,b*H/2);add(s2.front,a*W/2,b*H/2)});
+  const fit=(el,x,y,availW,availH,max)=>{const w=el.offsetWidth,h=el.offsetHeight;const sc=Math.min(max,availW/w,availH/h),ok=sc>=.32;
+    el.style.opacity=ok?1:0;el.style.pointerEvents=ok?'':'none';return {sc:Math.max(sc,.32),w,h}};
+  const top=document.getElementById('stTop'),bot=document.getElementById('stBot'),rt=document.getElementById('stRight'),bw=x1-x0,cx=(x0+x1)/2;
+  let f=fit(top,0,0,bw*1.05,y0-58,1.15);top.style.transform=`translate(${cx-f.w*f.sc/2}px,${y0-14-f.h*f.sc}px) scale(${f.sc})`;
+  f=fit(bot,0,0,bw*1.05,innerHeight-86-(y1+14),1.15);bot.style.transform=`translate(${cx-f.w*f.sc/2}px,${y1+14}px) scale(${f.sc})`;
+  f=fit(rt,0,0,innerWidth-x1-40,(y1-y0)*1.05,1.2);const rtTop=(y0+y1)/2-f.h*f.sc/2;rt.style.transform=`translate(${x1+22}px,${rtTop}px) scale(${f.sc})`;
+  const fs=Math.min(f.sc*1.05,Math.max(.4,(rtTop-24)/(168+70)));folder.style.transform=`translate(${x1+22+(f.w*f.sc-250*fs)/2}px,${rtTop-14-168*fs}px) scale(${fs})`;folder.style.opacity=f.sc>=.32?1:0;
+  {const rb=rtTop+f.h*f.sc+16,room=innerHeight-80-rb,bx=x1+22+f.w*f.sc/2;let ts,tx,ty;
+   if(room>=110){ts=Math.min(1,room/200);tx=bx-100*ts;ty=rb}   // under the right panel
+   else{const br=bot.getBoundingClientRect();ts=Math.max(.55,Math.min(.9,(innerWidth-br.right-30)/200));tx=Math.max(br.right+14,innerWidth-200*ts-16);ty=innerHeight-80-200*ts}   // bottom-right corner
+   tapeEl.style.transform=`translate(${tx}px,${ty}px) scale(${ts})`;tapeEl.style.opacity=1;tapeEl.style.pointerEvents=''}
+  const ta=document.getElementById('stTa');
+  if(ta){const pad=10,hint=document.querySelector('.hint'),hintB=hint?hint.getBoundingClientRect().bottom+8:52;
+    const folderEl=document.querySelector('.folder');const foldL=folderEl?folderEl.getBoundingClientRect().left:innerWidth;
+    let availW=innerWidth-2*pad,tx=pad,ty=hintB,availH=130;
+    const topR=top.getBoundingClientRect();
+    if(top.style.opacity!=='0'&&topR.left>180){availW=Math.min(availW,topR.left-pad-8);ty=Math.max(hintB,Math.min(topR.top,hintB+8));availH=Math.max(86,topR.height+12)}
+    if(foldL>80)availW=Math.min(availW,foldL-pad-8);
+    availW=Math.max(120,availW);availH=Math.max(72,availH);
+    const fta=fit(ta,0,0,availW,availH,1.05);const sc=Math.max(.45,fta.sc);
+    ta.style.opacity=1;ta.style.pointerEvents='auto';ta.style.transformOrigin='0 0';
+    ta.style.transform=`translate(${tx}px,${ty}px) scale(${sc})`}}
+
+
+const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+const step=(v,target,dt,sp)=>v<target?Math.min(target,v+dt*sp):Math.max(target,v-dt*sp);
+let bellCD=0,lastBom=0,th=.25,om=0,ph=0,pom=0,bth=0,bom=0,prevYaw=0,prevPos=new THREE.Vector3();
+const tmpQ=new THREE.Quaternion(),tmpE=new THREE.Euler(),wp=new THREE.Vector3(),lastV=new THREE.Vector3();
+let mx=0,my=0;addEventListener('pointermove',e=>{mx=e.clientX/innerWidth-.5;my=e.clientY/innerHeight-.5});
+let camTarget=new THREE.Vector3(),camDist=46;const STKW=Math.max(14,Math.min(30,5000/innerWidth));
+const clock=new THREE.Clock();
+function frame(){const dt=Math.min(clock.getDelta(),.033);
+  // sequenced fold: cover -> panel2 -> panel3 (reverse when closing)
+  const wantC=state.open,want2=state.unf,want3=state.unf;
+  if(want3||cur.p3>0){}
+  cur.p3=step(cur.p3,(want3&&cur.p2>.95)?1:0,dt,1.3);
+  cur.p2=step(cur.p2,(want2&&cur.f>.92)?1:(cur.p3<.02?0:cur.p2),dt,1.3);
+  cur.f=step(cur.f,(wantC&&cur.c>.55)?1:(cur.p2<.02?0:cur.f),dt,1.5);
+  cur.c=step(cur.c,wantC?1:(cur.p2<.02&&cur.f<.3?0:cur.c),dt,1.1);
+  {const ef=ease(cur.f);flapPiv.rotation.y=-Math.PI*.995*(1-ef);flapPiv.position.z=0.32-0.82*ef+Math.sin(ef*Math.PI)*0.55;flap.rotation.y=Math.sin(ef*Math.PI)*-0.12}
+  const ec=ease(cur.c);
+  coverPiv.rotation.y=-Math.PI*0.993*ec;
+  // soft-acrylic feel: cover lifts and bows slightly mid-flip
+  cover.position.z=COVZ-(COVZ-0.5)*ec+Math.sin(ec*Math.PI)*0.6;{const sq=1-.97*ec;spineMesh.scale.z=sq;spineMesh.position.z=-0.5+SPR*sq}   // open: the spine relaxes flat under the ring plate
+  spineDeco.visible=ec<.45;coverMat.thickness=.9-.4*ec;glareIn.material.opacity=.34*ec;glare.material.opacity=.2*(1-ec);glTex.offset.set(book.rotation.y*.5,book.rotation.x*.5);cover.rotation.y=Math.sin(ec*Math.PI)*0.16;cover.scale.x=1-Math.sin(ec*Math.PI)*.035;
+  piv2.rotation.y=-Math.PI*(1-ease(cur.p2))-0.16*ease(cur.p2);piv2.position.z=0.06*(1-cur.p2);
+  piv3.rotation.y=-Math.PI*(1-ease(cur.p3))+0.32*ease(cur.p3);piv3.position.z=0.03*(1-cur.p3);
+  {const cs=Math.cos(coverPiv.rotation.y);shCover.position.x=SPINE+cs*CVW/2+0.5;shCover.scale.x=Math.max(.03,Math.abs(cs));shCover.material.opacity=Math.min(1,Math.abs(cs)*1.5)}
+  {const u=Math.min(1,ec*2.2),st=Math.sin(Math.min(1,u*1.6)*Math.PI/2);band.position.set(u*u*16,-1.9+u*1.2,0);band.scale.set(1+st*.06,1,1+st*.45);band.rotation.y=u*.25;band.visible=u<.98}
+  charm.visible=ec<.5;                       // charm is on the outside of the cover → hidden once it's flipped
+  // book follows pointer a little + recentre as it widens
+  const tilt=focusMode?0:1;book.rotation.y+=((mx*.2*tilt)-book.rotation.y)*.06;book.rotation.x+=((my*.12*tilt)-book.rotation.x)*.06;
+  const left=SPINE-CVW*ec,right0=W+W*2*ease(cur.p3>0?Math.min(1,(cur.p2+cur.p3)/2):cur.p2*.5),right=Math.max(right0,SPINE+CVW+FW*ease(cur.f)-0.5);
+  const cx=(left+Math.max(W+0.5,right))/2+STKW*.5;book.position.x+=(-cx-book.position.x)*.08;
+  const span=Math.max(W+0.5,right)-left+4+STKW;const fitD=(span/2)/Math.tan(THREE.MathUtils.degToRad(15))/camera.aspect;
+  let targetD=Math.max(46,Math.min(160,fitD*1.05));
+  if(focusMode&&cur.p3>.9){const fp=s2.front.localToWorld(new THREE.Vector3(W/2,0,0)),t=Math.tan(THREE.MathUtils.degToRad(15));
+    controls.target.lerp(fp,.08);targetD=Math.max((2*W+2)/2/t/camera.aspect,(H+2)/2/t)}
+  else{focusMode=focusMode&&cur.p3>.9;controls.target.lerp(new THREE.Vector3(),.08)}
+  targetD*=userZoom;camDist+=(targetD-camDist)*.08;
+  const dir=camera.position.clone().sub(controls.target).normalize();camera.position.copy(controls.target).addScaledVector(dir,camDist);
+  shV.x+=((shT.x-rig.position.x)*160-shV.x*14)*dt;shV.y+=((shT.y-rig.position.y)*160-shV.y*14)*dt;
+  rig.position.x+=shV.x*dt;rig.position.y+=shV.y*dt;rig.rotation.z=-shV.x*.004;
+  // pendulum driven by the world acceleration of the hanging point
+  charm.getWorldPosition(wp);const v=wp.clone().sub(prevPos).divideScalar(dt||.016);const acc=v.clone().sub(lastV).divideScalar(dt||.016);prevPos.copy(wp);lastV.copy(v);
+  const ax=THREE.MathUtils.clamp(acc.x,-400,400),az=THREE.MathUtils.clamp(acc.z,-200,200),ay=THREE.MathUtils.clamp(acc.y,-400,400);
+  om+=(-(9.8+ay*.25)/1.6*Math.sin(th)-ax/1.6*Math.cos(th)*.35-0.9*om)*dt;th+=om*dt;
+  pom+=(-9.8/1.6*Math.sin(ph)-az/1.6*.08-1.1*pom)*dt;ph+=pom*dt;
+  bom+=(-30*Math.sin(bth)-om*2-ax*.25-2*bom)*dt;bth+=bom*dt;
+  swing.rotation.set(ph,0,th);bellPiv.rotation.z=bth*.6;
+  bellCD-=dt;const jolt=Math.abs(bom-lastBom)/dt;lastBom=bom;
+  if(bellCD<=0&&(jolt>260||Math.abs(bom)>7)&&charm.visible){ding(Math.min(.5,.08+jolt/1800));bellCD=.09+Math.random()*.08}
+  stepFlip(dt);updLeft();if(STK.some(p=>p.t&&Date.now()-p.t<560))drawAll();
+  controls.update();placeInk();placeStrips();renderer.render(scene,camera);requestAnimationFrame(frame)}
+window.NB={cur,state,log:SFX_LOG,renderAudio,
+  cellXY(d,side){const c=CELLS.find(k=>k.d==d&&k.c!==cvIntro);if(!c)return null;return toScreen(cellWorld(c,c.c===cvL?s2.front:s3.front,.5,.62))},
+  charmXY(){const v=new THREE.Vector3();mouse.getWorldPosition(v);v.y-=3.2;return toScreen(v)},coverXY(){return toScreen(coverMesh.localToWorld(new THREE.Vector3(1.5,-2,0)))}};
+frame();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>
