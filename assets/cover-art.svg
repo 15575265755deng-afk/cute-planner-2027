@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 230" fill="none" stroke="#f6e7cf" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- original line art: bunny holding a heart balloon, sitting on a cloud -->
+  <path d="M152 18c-6-9-20-5-18 6 2 9 18 19 18 19s16-10 18-19c2-11-12-15-18-6z"/>
+  <path d="M152 43c-3 10 4 16-1 26s-12 22-20 42"/>
+  <path d="M79 98C70 60 72 30 84 29c12-1 13 30 9 66"/>
+  <path d="M83 44c-2 14-1 30 2 44" stroke-width="1.6" opacity=".7"/>
+  <path d="M109 95c-2-34 4-62 16-60 12 2 7 34-3 64"/>
+  <path d="M120 50c-4 13-7 27-8 40" stroke-width="1.6" opacity=".7"/>
+  <path d="M100 92c-26 0-42 15-42 34 0 18 18 30 42 30s42-12 42-30c0-19-16-34-42-34z"/>
+  <path d="M80 125q5-6 10 0M110 125q5-6 10 0"/>
+  <path d="M98 133q2 3 4 0M100 135v4M96 141q4 3 8 0"/>
+  <circle cx="76" cy="136" r="3.2" stroke-width="1.6" opacity=".75"/><circle cx="124" cy="136" r="3.2" stroke-width="1.6" opacity=".75"/>
+  <path d="M72 152c-8 14-8 34 4 42M128 152c8 14 8 34-4 42"/>
+  <path d="M120 166c6-4 11-2 12 3s-3 8-9 8"/>
+  <path d="M74 192c-6 0-10 4-8 9h22c1-5-5-9-14-9zM126 192c6 0 10 4 8 9h-22c-1-5 5-9 14-9z"/>
+  <path d="M40 212c-10 0-14-12-4-16 0-10 14-12 18-5 6-8 20-6 22 3 4-6 16-5 18 2h52c4-7 16-8 20-1 8-3 18 3 14 11 8 2 6 10-2 10H40z"/>
+  <path d="M30 70l0 10M25 75h10M170 120v8M166 124h8M45 140v6M42 143h6" stroke-width="2"/>
+</svg>
